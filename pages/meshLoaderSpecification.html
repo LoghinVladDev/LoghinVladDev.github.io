@@ -924,7 +924,7 @@ typedef struct {
                         <code>jobType</code> <strong>must</strong> be a valid enumerant defined by <a href="#MeshLoader_JobType">MeshLoader_JobType</a>
                     </li>
                     <li> <small> MLUID-MeshLoader_CreateJobInfo-loadMode-parameter </small> <br/>
-                        <code>loadMode</code> <strong>must</strong> be a valid combination of <a href="#MeshLoader_JobLoadModeFlagBits">MeshLoader_JobLoadModeFlagBits</a> values.
+                        <code>loadMode</code> <strong>must</strong> be a valid combination of <a href="#MeshLoader_MeshLoadModeFlagBits">MeshLoader_MeshLoadModeFlagBits</a> values.
                     </li>
                     <li> <small> MLUID-MeshLoader_CreateJobInfo-inputPath-parameter </small> <br/>
                         <code>inputPath</code> <strong>must</strong> be a valid pointer to a null-terminated UTF-8 string.
@@ -1362,6 +1362,264 @@ void MeshLoader_destroyJobs (
                 </ul>
 
             </div>
+
+        </div>
+
+        <div>
+
+            <h1 id="memoryAllocation">6. Memory Allocation</h1>
+
+            <p> The Mesh Loader Library provides applications the opportunity to perform memory allocations on behalf of the library implementations.
+                If this feature is not used, the implementation will perform its own memory allocations. Since most memory allocations are off the critical path,
+                this is not meant as a performance feature. Rather, this <strong>can</strong> be useful for certain embedded systems, for systems with existing
+                dedicated allocation, for debugging purposes (e.g. putting a guard page after all allocations), or for memory allocation logging.
+            </p>
+
+            <p> Memory Allocation Handing is done via providing allocator functions in a <code>MeshLoader_AllocationCallbacks</code> structure, defined as:
+                <a id="MeshLoader_AllocationCallbacks"></a> </p>
+
+<pre lang="c">
+typedef struct {
+    MeshLoader_StructureType                            structureType;
+    void                                              * pNext;
+    void                                              * pUserData;
+    MeshLoader_AllocationFunction                       allocationFunction;
+    MeshLoader_ReallocationFunction                     reallocationFunction;
+    MeshLoader_FreeFunction                             freeFunction;
+    MeshLoader_InternalAllocationNotificationFunction   internalAllocationNotificationFunction;
+    MeshLoader_InternalAllocationNotificationFunction   internalReallocationNotificationFunction;
+    MeshLoader_InternalAllocationNotificationFunction   internalFreeNotificationFunction;
+} MeshLoader_AllocationCallbacks;
+</pre>
+
+            <ul>
+                <li> <code>structureType</code> is the type of the structure. </li>
+                <li> <code>pNext</code> is <code>NULL</code> or a pointer to a structure extending this structure. </li>
+                <li> <code>pUserData</code> is a value to be interpreted by the implementation of the callbacks. When any of the callbacks in
+                    <code>MeshLoader_AllocationCallbacks</code> are called, the library implementation will pass this value as the first parameter
+                    to the callback. This value <strong>can</strong> vary each time the allocator is passed into a command, even when
+                    the same object takes an allocator in multiple commands. </li>
+                <li> <code>allocationFunction</code> is a <a href="#MeshLoader_AllocationFunction">MeshLoader_AllocationFunction</a>
+                    pointer to an application-defined memory allocation function. </li>
+                <li> <code>reallocationFunction</code> is a <a href="#MeshLoader_ReallocationFunction">MeshLoader_ReallocationFunction</a>
+                    pointer to an application-defined memory reallocation function. </li>
+                <li> <code>freeFunction</code> is a <a href="#MeshLoader_FreeFunction">MeshLoader_FreeFunction</a>
+                    pointer to an application-defined memory free function. </li>
+                <li> <code>internalAllocationNotificationFunction</code> is a <a href="#MeshLoader_InternalAllocationNotificationFunction">MeshLoader_InternalAllocationNotificationFunction</a>
+                    pointer to an application-defined function that is called by the implementation when the library makes internal allocations. </li>
+                <li> <code>internalReallocationNotificationFunction</code> is a <a href="#MeshLoader_InternalAllocationNotificationFunction">MeshLoader_InternalAllocationNotificationFunction</a>
+                    pointer to an application-defined function that is called by the implementation when the library makes internal reallocations. </li>
+                <li> <code>internalFreeNotificationFunction</code> is a <a href="#MeshLoader_InternalAllocationNotificationFunction">MeshLoader_InternalAllocationNotificationFunction</a>
+                    pointer to an application-defined function that is called by the implementation when the library frees internal allocations. </li>
+            </ul>
+
+            <h3>Valid Usage</h3>
+
+            <ul>
+                <li> <small>MLUID-MeshLoader_AllocationCallbacks-allocationFunction-00012</small> <br/>
+                    <code>allocationFunction</code> <strong>must</strong> be a <i>valid</i> pointer to a <i>valid</i> user-defined <a href="#MeshLoader_AllocationFunction">MeshLoader_AllocationFunction</a>.
+                </li>
+                <li> <small>MLUID-MeshLoader_AllocationCallbacks-reallocationFunction-00013</small> <br/>
+                    <code>reallocationFunction</code> <strong>must</strong> be a <i>valid</i> pointer to a <i>valid</i> user-defined <a href="#MeshLoader_ReallocationFunction">MeshLoader_ReallocationFunction</a>.
+                </li>
+                <li> <small>MLUID-MeshLoader_AllocationCallbacks-freeFunction-00014</small> <br/>
+                    <code>freeFunction</code> <strong>must</strong> be a <i>valid</i> pointer to a <i>valid</i> user-defined <a href="#MeshLoader_FreeFunction">MeshLoader_FreeFunction</a>.
+                </li>
+                <li> <small>MLUID-MeshLoader_AllocationCallbacks-internalNotifications-00015</small> <br/>
+                    If either of <code>internalAllocationNotificationFunction</code>, <code>internalReallocationNotificationFunction</code> or <code>internalFreeNotificationFunction</code>
+                    is not <code>NULL</code>, all three <strong>must</strong> be <i>valid</i> pointers to <i>valid</i> <a href="#MeshLoader_InternalAllocationNotificationFunction">MeshLoader_InternalAllocationNotificationFunction</a>
+                    user-defined functions.
+                </li>
+            </ul>
+
+            <p> The type of <code>allocationFunction</code>, <code>MeshLoader_AllocationFunction</code> is:
+                <a id="MeshLoader_AllocationFunction"></a> </p>
+
+<pre lang="c">
+typedef void * ( * MeshLoader_AllocationFunction ) (
+    void                              * pUserData,
+    MeshLoader_size                     size,
+    MeshLoader_size                     alignment,
+    MeshLoader_SystemAllocationScope    allocationScope
+);
+</pre>
+
+            <ul>
+                <li> <code>pUserData</code> is the value specified for <a href="#MeshLoader_AllocationCallbacks">MeshLoader_AllocationCallbacks</a><code>::pUserData</code>
+                    in the allocator specified by the application. </li>
+                <li> <code>size</code> is the size in bytes of the requested allocation. </li>
+                <li> <code>alignment</code> is the requested alignment of the allocation in bytes and <strong>must</strong> be a power of two. </li>
+                <li> <code>allocationScope</code> is a <a href="#MeshLoader_SystemAllocationScope">MeshLoader_SystemAllocationScope</a> value specifying the
+                    allocation scope of the lifetime of the allocation. </li>
+            </ul>
+
+            <p> If <code>allocationFunction</code> is unable to allocate the requested memory, it <strong>must</strong> return <code>NULL</code>.
+                If the allocation is successful, it <strong>must</strong> return a <i>valid</i> pointer to memory allocation containing at least <code>size</code>
+                bytes, and with the pointer value being a multiple of <code>alignment</code> bytes.</p>
+
+            <div class="note">
+                <p> Correct library operation <strong>cannot</strong> be assumed if the application does not follow these rules. </p>
+                <p> For example, <code>internalAllocation</code> (or <code>internalReallocation</code>) could cause termination of running Mesh Loader instance(s)
+                    on a failed allocation for debugging purposes, either directly or indirectly. In these circumstances, it <strong>cannot</strong> be assumed that
+                    any part of any affected <a href="#MeshLoader_Instance">MeshLoader_Instance</a> objects are going to operate correctly (even <a href="#MeshLoader_destroyInstance">MeshLoader_destroyInstance</a>)
+                    , and the application <strong>must</strong> ensure it cleans up properly via other means (e.g. process termination).</p>
+            </div>
+
+            <p> If <code>allocationFunction</code> returns <code>NULL</code>, and the implementation is unable to continue correct processing of the current command
+                without the requested allocation, it <strong>must</strong> treat this as a runtime error, and generate <code>MeshLoader_Result_OutOfMemory</code> at
+                the appropriate time of the command in which the condition was detected, as described in <a href="#fundamentals-returnCodes">Return Codes</a>. </p>
+
+            <p> If the implementation is able to continue correct processing of the current command without the requested allocation, then it <strong>may</strong> do so,
+                and <strong>must</strong> not generate <code>MeshLoader_Result_OutOfMemory</code> as a result of this failed allocation. </p>
+
+            <p> The type of <code>reallocationFunction</code>, <code>MeshLoader_ReallocationFunction</code> is:
+                <a id="MeshLoader_ReallocationFunction"></a> </p>
+
+<pre lang="c">
+typedef void * ( * MeshLoader_ReallocationFunction ) (
+        void                              * pUserData,
+        void                              * pOriginal,
+        MeshLoader_size                     size,
+        MeshLoader_size                     alignment,
+        MeshLoader_SystemAllocationScope    allocationScope
+);
+</pre>
+
+            <ul>
+                <li> <code>pUserData</code> is the value specified for <a href="#MeshLoader_AllocationCallbacks">MeshLoader_AllocationCallbacks</a><code>::pUserData</code>
+                    in the allocator specified by the application. </li>
+                <li> <code>pOriginal</code> <strong>must</strong> be either <code>NULL</code> or a pointer previously returned by <code>allocationFunction</code> or
+                    <code>reallocationFunction</code> of a compatible allocator. </li>
+                <li> <code>size</code> is the size in bytes of the requested allocation. </li>
+                <li> <code>alignment</code> is the requested alignment of the allocation in bytes and <strong>must</strong> be a power of two. </li>
+                <li> <code>allocationScope</code> is a <a href="#MeshLoader_SystemAllocationScope">MeshLoader_SystemAllocationScope</a> value specifying the
+                    allocation scope of the lifetime of the allocation. </li>
+            </ul>
+
+            <p> <code>reallocationFunction</code> <strong>must</strong> return an allocation with enough space for <code>size</code> bytes, and the contents of
+                the original allocation from bytes zero to min(original size, new size) - 1 <strong>must</strong> be preserved in the returned allocation. If
+                size is larger than the old size, the contents of the additional space are undefined. If satisfying these requirements involves creating a new
+                allocation, then the old allocation <strong>should</strong> be freed. </p>
+
+            <p> If <code>pOriginal</code> is <code>NULL</code>, then <code>reallocationFunction</code> <strong>must</strong> behave equivalently to a call of
+                <a href="#MeshLoader_AllocationFunction">MeshLoader_AllocationFunction</a> with the same parameter values (without <code>pOriginal</code>) </p>
+
+            <p> If <code>size</code> is zero, then <code>reallocationFunction</code> <strong>must</strong> behave equivalently to a call of
+                <a href="#MeshLoader_FreeFunction">MeshLoader_FreeFunction</a> with the same <code>pUserData</code> parameter value, and <code>pMemory</code> equal
+                to <code>pOriginal</code>. </p>
+
+            <p> If <code>pOriginal</code> is not <code>NULL</code>, the implementation <strong>must</strong> ensure that <code>alignment</code> is equal to the
+                <code>alignment</code> used to originally allocate <code>pOriginal</code>. </p>
+
+            <p> If this function fails and <code>pOriginal</code> is not <code>NULL</code>, the application <strong>must</strong> not free the old allocation. </p>
+
+            <p> Additionally, <code>reallocationFunction</code> <strong>must</strong> follow the same rules for <a href="#MeshLoader_AllocationFunction">MeshLoader_AllocationFunction</a>. </p>
+
+            <p> The type of <code>freeFunction</code>, <code>MeshLoader_FreeFunction</code> is:
+                <a id="MeshLoader_FreeFunction"></a> </p>
+
+<pre lang="c">
+typedef void ( * MeshLoader_FreeFunction ) (
+        void                              * pUserData,
+        void                              * pMemory
+);
+</pre>
+
+            <ul>
+                <li> <code>pUserData</code> is the value specified for <a href="#MeshLoader_AllocationCallbacks">MeshLoader_AllocationCallbacks</a><code>::pUserData</code>
+                    in the allocator specified by the application. </li>
+                <li> <code>pMemory</code> is the allocation to be freed. </li>
+            </ul>
+
+            <p> <code>pMemory</code> <strong>may</strong> be <code>NULL</code>, which the callback <strong>must</strong> handle safely. If <code>pMemory</code>
+                is not <code>NULL</code>, it <strong>must</strong> be a pointer previously allocated by <code>allocationFunction</code> or
+                <code>reallocationFunction</code>. The application <strong>should</strong> free this memory. </p>
+
+            <p> The type of <code>internalAllocationNotificationFunction</code>, <code>internalReallocationNotificationFunction</code> and
+                <code>internalFreeNotificationFunction</code> is:
+                <a id="MeshLoader_InternalAllocationNotificationFunction"></a> </p>
+
+<pre lang="c">
+typedef void ( * MeshLoader_InternalAllocationNotificationFunction ) (
+        void                                      * pUserData,
+        MeshLoader_AllocationNotification   const * pNotification
+);
+</pre>
+
+            <ul>
+                <li> <code>pUserData</code> is the value specified for <a href="#MeshLoader_AllocationCallbacks">MeshLoader_AllocationCallbacks</a><code>::pUserData</code>
+                    in the allocator specified by the application. </li>
+                <li> <code>pNotification</code> is a pointer to a <a href="MeshLoader_AllocationNotification">MeshLoader_AllocationNotification</a> structure,
+                    containing the data of the notification. </li>
+            </ul>
+
+            <p> These are purely informational callbacks. </p>
+
+            <p> Each allocation has an <i>allocation scope</i> defining its lifetime and which object it is associated with. Possible values passed to the
+                <code>allocationScope</code> parameter of the callback functions specified by <a href="#MeshLoader_AllocationCallbacks">MeshLoader_AllocationCallbacks</a>,
+                indicating the allocation scope, are:
+                <a id="MeshLoader_SystemAllocationScope"></a> </p>
+
+<pre lang="c">
+typedef enum {
+    MeshLoader_SystemAllocationScope_Unknown        = 0x00000000U,
+    MeshLoader_SystemAllocationScope_Instance       = 0x00000001U,
+    MeshLoader_SystemAllocationScope_Worker         = 0x00000002U,
+    MeshLoader_SystemAllocationScope_Object         = 0x00000003U,
+    MeshLoader_SystemAllocationScope_Component      = 0x00000004U,
+} MeshLoader_SystemAllocationScope;
+</pre>
+
+            <ul>
+                <li> <code>MeshLoader_SystemAllocationScope_Unknown</code> specifies that the allocation scope is undefined. </li>
+                <li> <code>MeshLoader_SystemAllocationScope_Instance</code> specifies that the allocation is scoped to the lifetime of
+                    a <a href="#MeshLoader_Instance">MeshLoader_Instance</a>. </li>
+                <li> <code>MeshLoader_SystemAllocationScope_Worker</code> specifies that the allocation is scoped to the lifetime of
+                    a <a href="#MeshLoader_Job">MeshLoader_Job</a> being processed by Mesh Loader Workers. This memory <strong>must</strong> be
+                    usable across multiple processor threads. </li>
+                <li> <code>MeshLoader_SystemAllocationScope_Object</code> specifies that the allocation is scoped to the lifetime of
+                    a Mesh Loader Object that is being created or used. </li>
+                <li> <code>MeshLoader_SystemAllocationScope_Component</code> specifies that the allocation is scoped to the lifetime of
+                    a component of a Mesh Loader Object that is being created or used. </li>
+            </ul>
+
+            <p> The <code>MeshLoader_AllocationNotification</code> structure is defined as:
+                <a id="MeshLoader_AllocationNotification"></a> </p>
+
+<pre lang="c">
+typedef struct {
+    MeshLoader_StructureType            structureType;
+    void                        const * pNext;
+    void                              * pMemory;
+    void                              * pOldMemory;
+    MeshLoader_size                     size;
+    MeshLoader_size                     alignment;
+    MeshLoader_SystemAllocationScope    allocationScope;
+    MeshLoader_StringLiteral            explicitMemoryPurpose;
+} MeshLoader_AllocationNotification;
+</pre>
+
+            <ul>
+                <li> <code>structureType</code> is the type of the structure. </li>
+                <li> <code>pNext</code> is <code>NULL</code> or a pointer to a structure extending this structure. </li>
+                <li> If a parameter of <code>internalAllocationNotificationFunction</code> or <code>internalReallocationNotificationFunction</code>
+                    <code>pMemory</code> will contain the address of the allocated resource. If a parameter of <code>internalFreeNotificationFunction</code>,
+                    <code>pMemory</code> will contain the address of the resource that will be freed.</li>
+                <li> If a parameter of <code>internalReallocationNotificationFunction</code>,
+                    <code>pOldMemory</code> will contain the old address of the resource. </li>
+                <li> If a parameter of <code>internalAllocationNotificationFunction</code> or <code>internalReallocationNotificationFunction</code>,
+                    <code>size</code> will contain the size, in bytes, of the memory allocated at <code>pMemory</code>. </li>
+                <li> If a parameter of <code>internalAllocationNotificationFunction</code> or <code>internalReallocationNotificationFunction</code>,
+                    <code>alignment</code> will contain the alignment, in bytes, of the memory allocated at <code>pMemory</code>. This value is a power of two. </li>
+                <li> <code>allocationScope</code> is a <a href="#MeshLoader_SystemAllocationScope">MeshLoader_SystemAllocationScope</a> value
+                    specifying the allocation scope of the lifetime of the allocation. </li>
+                <li> <code>explicitMemoryPurpose</code> is a pointer to a null-terminated, UTF-8 formatted <a href="#string">MeshLoader_StringLiteral</a>
+                    specifying the explicit purpose of the allocation. </li>
+            </ul>
+
+            <p> <code>pNotification</code> is, just like the function it is passed into (<code>MeshLoader_AllocationNotification</code>), purely information.
+                Consequently, the application <strong>must</strong> not apply any allocation or modification operations to the addresses received through the
+                <code>pMemory</code> or <code>pOldMemory</code> values.</p>
 
         </div>
 

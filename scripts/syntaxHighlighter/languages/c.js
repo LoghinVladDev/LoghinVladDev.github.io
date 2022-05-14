@@ -67,6 +67,13 @@ const cTokenRules = {
                             continue
                         }
 
+                        if (
+                            tokens [ previousPosition ].type === cTokenRules.types.operator &&
+                            tokens [ previousPosition ].value === ")"
+                        ) {
+                            break
+                        }
+
                         if ( tokens [ previousPosition ].type === cTokenRules.types.identifier ) {
                             tokens [ previousPosition ] = {
                                 type        : cTokenRules.types.functionIdentifier,
