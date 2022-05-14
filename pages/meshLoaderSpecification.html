@@ -249,7 +249,7 @@ typedef char const *                    MeshLoader_StringLiteral;
 
                         <li>
                             <h4> Valid Usage for Enumerated Types: </h4>
-                            <p> Any parameter of an enumerated type <strong>must</strong> be a valid enumerant for that type. A enumerant is valid if: </p>
+                            <p> Any parameter of an enumerated type <strong>must</strong> be a valid enumerant for that type. An enumerant is valid if: </p>
                             <ul>
                                 <li> The enumerant is defined as part of the enumerated type. </li>
                             </ul>
@@ -287,7 +287,7 @@ typedef MeshLoader_uint32               MeshLoader_Flags;
                         <li>
                             <h4> Valid Usage for Structure Types: </h4>
                             <p> Any parameter that is a structure containing a <code>structureType</code> member <strong>must</strong> have a value
-                                of <code>structureType</code> which is a valid <a href="MeshLoader_StructureType">MeshLoader_StructureType</a> value matching
+                                of <code>structureType</code> which is a valid <a href="#MeshLoader_StructureType">MeshLoader_StructureType</a> value matching
                                 the type of the structure. </p>
                         </li>
 
@@ -843,7 +843,7 @@ typedef struct {
                         <code>flags</code> <strong>must</strong> be a valid combination of <a href="#MeshLoader_JobsCreateFlagBits">MeshLoader_JobsCreateFlagBits</a> values.
                     </li>
                     <li> <small> MLUID-MeshLoader_JobsCreateInfo-jobCount-parameter </small> <br/>
-                        <code>jobCount</code> <strong>must</strong> be greated than <code>0</code>.
+                        <code>jobCount</code> <strong>must</strong> be greater than <code>0</code>.
                     </li>
                     <li> <small> MLUID-MeshLoader_JobsCreateInfo-pJobs-parameter </small> <br/>
                         <code>pJobs</code> <strong>must</strong> be a valid pointer to an array of valid <code>jobCount</code> <a href="#MeshLoader_Job">MeshLoader_Job</a> handles.
