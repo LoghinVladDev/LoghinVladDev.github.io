@@ -20,8 +20,21 @@ const darculaColorSet = {
         }
 
         if ( element.tagName.toLowerCase() === "strong" ) {
+
+            if ( element.className === "" ) {
+                element.style = "" +
+                    "color: " + darculaColorSet.keyword + ";"
+            }
+        }
+
+        if ( element.className === "strong-state-description" ) {
             element.style = "" +
-                "color: " + darculaColorSet.keyword + ";"
+                "color: " + darculaColorSet.enumerant + ";"
+        }
+
+        if ( element.className === "strong-action-description" ) {
+            element.style = "" +
+                "color: " + darculaColorSet.functionIdentifier + ";"
         }
     },
 
