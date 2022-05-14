@@ -14,7 +14,6 @@
 
     </div>
 
-
     <div id="fundamentals">
 
         <h1> 2. Fundamentals </h1>
@@ -489,7 +488,7 @@ MeshLoader_Result MeshLoader_createInstance (
                 <li> <code>pInstance</code> points to a <a href="#MeshLoader_Instance">MeshLoader_Instance</a> handle in which the resulting instance is returned. </li>
             </ul>
 
-            <h3>3.1.1. Valid Usage (Implicit)</h3>
+            <h3> Valid Usage (Implicit)</h3>
 
             <ul>
                 <li> <small> MLUID-MeshLoader_createInstance-pCreateInfo-parameter </small> <br/>
@@ -503,7 +502,7 @@ MeshLoader_Result MeshLoader_createInstance (
                 </li>
             </ul>
 
-            <h3> 3.1.2. Return Codes </h3>
+            <h3> Return Codes </h3>
             <a href="#successCodes">Success</a>
             <ul>
                 <li> <code>MeshLoader_Result_Success</code> </li>
@@ -514,16 +513,10 @@ MeshLoader_Result MeshLoader_createInstance (
                 <li> <code>MeshLoader_Result_MutexError</code> </li>
             </ul>
 
-        </div>
-
-        <div id="instanceCreateInfo">
-
-            <h2> 3.2. Instance Create Info </h2>
-
             <p> The <code>MeshLoader_InstanceCreateInfo</code> structure is defined as: </p>
             <a id="MeshLoader_InstanceCreateInfo"></a>
 
-<pre lang="c">
+            <pre lang="c">
 typedef struct {
     MeshLoader_StructureType            structureType;
     void                        const * pNext;
@@ -539,7 +532,7 @@ typedef struct {
                 <li> <code>maxWorkerThreadCount</code> is the maximum number of threads the Instance is allowed to use for <a href="">Worker</a> objects. If value is 0, the instance will use 1/4 of the maximum processor capable concurrent threads ( logical core count ) </li>
             </ul>
 
-            <h3> 3.2.1. Valid Usage (Implicit) </h3>
+            <h3> Valid Usage (Implicit) </h3>
             <ul>
                 <li> <small> MLUID-MeshLoader_InstanceCreateInfo-structureType </small> <br/>
                     <code>structureType</code> <strong>must</strong> be <code>MeshLoader_StructureType_InstanceCreateInfo</code>
@@ -555,7 +548,7 @@ typedef struct {
             <a id="MeshLoader_InstanceCreateFlags"></a>
             <p> The <code>MeshLoader_InstanceCreateFlags</code> type is reserved for future use. </p>
 
-<pre lang="c">
+            <pre lang="c">
 typedef MeshLoader_Flags                MeshLoader_InstanceCreateFlags;
 </pre>
 
@@ -563,7 +556,7 @@ typedef MeshLoader_Flags                MeshLoader_InstanceCreateFlags;
 
         <div id="instanceDestruction">
 
-            <h2> 3.3. Instance Destruction </h2>
+            <h2> 3.2. Instance Destruction </h2>
 
             <p> To destroy an instance, call: </p>
             <a id="MeshLoader_destroyInstance"></a>
@@ -580,7 +573,7 @@ void MeshLoader_destroyInstance (
                 <li> <code>pAllocationCallbacks</code> controls memory allocation as described in the <a href="">Memory Allocation</a> chapter. </li>
             </ul>
 
-            <h3> 3.3.1. Valid Usage </h3>
+            <h3> Valid Usage </h3>
             <ul>
                 <li> <small> MLUID-MeshLoader_destroyInstance-instance-00001 </small> <br/>
                     All child objects created using <code>instance</code> <strong>must</strong> have been destroyed prior to this call.
@@ -594,7 +587,7 @@ void MeshLoader_destroyInstance (
                 </li>
             </ul>
 
-            <h3> 3.3.2. Valid Usage (Implicit) </h3>
+            <h3> Valid Usage (Implicit) </h3>
             <ul>
                 <li> <small> MLUID-MeshLoader_destroyInstance-instance-parameter </small> <br/>
                     If <code>instance</code> is not <code>NULL</code>, <code>instance</code> <strong>must</strong> be a valid <a href="#MeshLoader_Instance">MeshLoader_Instance</a>
@@ -610,228 +603,328 @@ void MeshLoader_destroyInstance (
 
     </div>
 
-    # 4. Jobs
+    <div id="jobs">
 
-    A Job is a description of the task that has to be computed in the background by the library in order to load a single object.
-    Once created, it has to be started, and the result can be observed or fully acquired from it. The job type determines the
-    task that the Worker Thread will execute in order to load the requested file.
+        <h1>4. Jobs</h1>
 
-    The job types can be expanded by defining a <a href="#customJobs">Custom Job</a>.
+        <p> A Job is a description of the task that has to be computed in the background by the library in order to load a single object.
+            Once created, it has to be started, and the result can be observed or fully acquired from it. The job type determines the
+            task that the Worker Thread will execute in order to load the requested file. </p>
 
-    Jobs are created using an instance, and are Child objects to the used Instance. The application <strong>must</strong>, as a result
-    , destroy all jobs created from an instance before destroying an instance.
+        <p> The job types can be expanded by defining a <a href="#customJobs">Custom Job</a>. </p>
 
-    Jobs are represented by <code>MeshLoader_Job</code> handles:
-    <a id="MeshLoader_Job"></a>
+        <p> Jobs are created using an instance, and are Child objects to the used Instance. The application <strong>must</strong>, as a result,
+            destroy all jobs created from an instance before destroying an instance. </p>
 
-    ```C
-    MESH_LOADER_DEFINE_HANDLE ( MeshLoader_Job )
-    ```
+        <p> Jobs are represented by <code>MeshLoader_Job</code> handles:
+            <a id="MeshLoader_Job"></a> </p>
 
-    ## 4.1. Job Lifetime & Execution
+<pre lang="c">
+MESH_LOADER_DEFINE_HANDLE ( MeshLoader_Job )
+</pre>
 
-    Since a lot of objects have to be loaded, jobs <i>should</i> be created, started and queried in large batches. Since
-    they operate on a priority basis, there is some control over the order in which jobs will be handled and be finished.
+        <div id="jobLifetimeAndExecution">
 
-    The following states are defined for a job:
-    - Ready - the job is created and awaiting launch
-    - Running - the job is being treated by a Worker or is waiting for a Worker to handle it
-    - Paused - the job is not being treated by any Worker and will not be picked up by one until it is resumed to Running
-    - Stopped - the job is not being treated by any Worker and cannot be picked up anymore until it is restarted, or is destroyed
-    - Terminated - the job is not being treated by any Worker and <i>should</i> not be restarted.
-    - Finished - the job has is finished, and its results can be observed or acquired. It can be restarted afterwards.
-    - FinishedError - the job has encountered an error, and must be cleared of its error state before being restarted, or just destroyed.
+            <h2> 4.1. Job Lifetime & Execution </h2>
 
-    The following actions are defined for interacting with a job from the API:
-    - Create
-    - Start
-    - Pause
-    - Resume
-    - Stop
-    - Terminate
-    - Destroy
-    - Get Error
+            <p> Since a lot of objects have to be loaded, jobs <i>should</i> be created, started and queried in large batches. Since
+                they operate on a priority basis, there is some control over the order in which jobs will be handled and be finished. </p>
 
-    State Transition Table
+            <p> The following states are defined for a job: </p>
 
-    | Action/State                    | Ready                       | Running                     | Paused                      | Stopped                     | Terminated | Finished                    | Finished Error              |
-    |---------------------------------|-----------------------------|-----------------------------|-----------------------------|-----------------------------|------------|-----------------------------|-----------------------------|
-    | <strong>Create</strong>         | undefined                   | undefined                   | undefined                   | undefined                   | undefined  | undefined                   | undefined                   |
-    | <strong>Start</strong>          | <strong>Running</strong>    | <strong>Running</strong>    | undefined                   | <strong>Running</strong>    | undefined  | <strong>Running</strong>    | undefined                   |
-    | <strong>Pause</strong>          | undefined                   | <strong>Paused</strong>     | <strong>Paused</strong>     | <strong>Stopped</strong>    | undefined  | <strong>Finished</strong>   | undefined                   |
-    | <strong>Resume</strong>         | <strong>Ready</strong>      | <strong>Running</strong>    | <strong>Running</strong>    | <strong>Stopped</strong>    | undefined  | <strong>Finished</strong>   | undefined                   |
-    | <strong>Stop</strong>           | <strong>Ready</strong>      | <strong>Stopped</strong>    | <strong>Stopped</strong>    | <strong>Stopped</strong>    | undefined  | <strong>Finished</strong>   | undefined                   |
-    | <strong>Terminate</strong>      | <strong>Terminated</strong> | <strong>Terminated</strong> | <strong>Terminated</strong> | <strong>Terminated</strong> | undefined  | <strong>Terminated</strong> | <strong>Terminated</strong> |
-    | <strong>Destroy</strong>        | undefined                   | undefined                   | undefined                   | undefined                   | undefined  | undefined                   | undefined                   |
-    | <strong>Get Error</strong>      | <strong>Ready</strong>      | <strong>Running</strong>    | <strong>Paused</strong>     | <strong>Stopped</strong>    | undefined  | <strong>Finished</strong>   | <strong>Ready</strong>      |
+            <ul>
+                <li> <strong> Ready </strong> - the job is created and awaiting launch. </li>
+                <li> <strong> Running </strong> - the job is being treated by a Worker or is waiting for a Worker to handle it. </li>
+                <li> <strong> Paused </strong> - the job is not being treated by any Worker and will not be picked up by one until it is resumed to Running. </li>
+                <li> <strong> Stopped </strong> - the job is not being treated by any Worker and cannot be picked up anymore until it is restarted, or is destroyed. </li>
+                <li> <strong> Terminated </strong> - the job is not being treated by any Worker and <i>should</i> not be restarted. </li>
+                <li> <strong> Finished </strong> - the job has is finished, and its results can be observed or acquired. It can be restarted afterwards. </li>
+                <li> <strong> FinishedError </strong> - the job has encountered an error, and must be cleared of its error state before being restarted, or just destroyed. </li>
+            </ul>
 
-    ## 4.2. Job Creation
+            <p> The following actions are defined for interacting with a job from the API: </p>
 
-    To create a number of Job objects, call:
-    <a id="MeshLoader_createJobs"></a>
-    ```C
-    MeshLoader_Result MeshLoader_createJobs (
+            <ul>
+                <li> Create - used for creating job objects. </li>
+                <li> Start - used for starting job objects execution. </li>
+                <li> Pause - used to pause job objects execution. </li>
+                <li> Resume - used to resume job objects execution. </li>
+                <li> Stop - used to stop job objects execution in a safe manner. </li>
+                <li> Terminate - used to terminate job objects execution immediately. </li>
+                <li> Destroy - used to destroy job objects. </li>
+                <li> Get Error - used to acquire the error that caused a job object's execution to halt. </li>
+            </ul>
+
+            <p> State Transition Table: </p>
+
+            <table>
+                <tr>
+                    <th> Action/State </th>
+                    <th> Ready </th>
+                    <th> Running </th>
+                    <th> Paused </th>
+                    <th> Stopped </th>
+                    <th> Terminated </th>
+                    <th> Finished </th>
+                    <th> Finished Error </th>
+                </tr>
+                <tr>
+                    <th> Create </th>
+                    <td> undefined </td>
+                    <td> undefined </td>
+                    <td> undefined</td>
+                    <td> undefined </td>
+                    <td> undefined </td>
+                    <td> undefined </td>
+                    <td> undefined </td>
+                </tr>
+                <tr>
+                    <th> Start </th>
+                    <td> <strong>Running</strong> </td>
+                    <td> <strong>Running</strong> </td>
+                    <td> undefined</td>
+                    <td> <strong>Running</strong> </td>
+                    <td> undefined </td>
+                    <td> <strong>Running</strong> </td>
+                    <td> undefined </td>
+                </tr>
+                <tr>
+                    <th> Pause </th>
+                    <td> undefined </td>
+                    <td> <strong>Paused</strong> </td>
+                    <td> <strong>Paused</strong> </td>
+                    <td> <strong>Stopped</strong> </td>
+                    <td> undefined </td>
+                    <td> <strong>Finished</strong> </td>
+                    <td> undefined </td>
+                </tr>
+                <tr>
+                    <th> Resume </th>
+                    <td> <strong>Ready</strong> </td>
+                    <td> <strong>Running</strong> </td>
+                    <td> <strong>Running</strong> </td>
+                    <td> <strong>Stopped</strong> </td>
+                    <td> undefined </td>
+                    <td> <strong>Finished</strong> </td>
+                    <td> undefined </td>
+                </tr>
+                <tr>
+                    <th> Stop </th>
+                    <td> <strong>Ready</strong> </td>
+                    <td> <strong>Stopped</strong> </td>
+                    <td> <strong>Stopped</strong> </td>
+                    <td> <strong>Stopped</strong> </td>
+                    <td> undefined </td>
+                    <td> <strong>Finished</strong> </td>
+                    <td> undefined </td>
+                </tr>
+                <tr>
+                    <th> Terminate </th>
+                    <td> <strong>Terminated</strong> </td>
+                    <td> <strong>Terminated</strong> </td>
+                    <td> <strong>Terminated</strong> </td>
+                    <td> <strong>Terminated</strong> </td>
+                    <td> undefined </td>
+                    <td> <strong>Terminated</strong> </td>
+                    <td> <strong>Terminated</strong> </td>
+                </tr>
+                <tr>
+                    <th> Destroy </th>
+                    <td> undefined </td>
+                    <td> undefined </td>
+                    <td> undefined </td>
+                    <td> undefined </td>
+                    <td> undefined </td>
+                    <td> undefined </td>
+                    <td> undefined </td>
+                </tr>
+                <tr>
+                    <th> Get Error </th>
+                    <td> <strong>Ready</strong> </td>
+                    <td> <strong>Running</strong> </td>
+                    <td> <strong>Paused</strong> </td>
+                    <td> <strong>Stopped</strong> </td>
+                    <td> undefined </td>
+                    <td> <strong>Finished</strong> </td>
+                    <td> <strong>Ready</strong> </td>
+                </tr>
+            </table>
+
+        </div>
+
+        <div id="jobCreation">
+
+            <h2> 4.2. Job Creation </h2>
+
+            <p> To create a number of Job objects, call:
+                <a id="MeshLoader_createJobs"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_createJobs (
     MeshLoader_Instance                     instance,
     MeshLoader_JobsCreateInfo       const * pCreateInfo,
     MeshLoader_AllocationCallbacks  const * pAllocationCallbacks
-    );
-    ```
-    <ul>
-        <li> <code>instance</code> is a handle of a <i>valid</i> <code>MeshLoader_Instance</code> handle previously created with <a href="#MeshLoader_createInstance">MeshLoader_createInstance</a>. </li>
-        <li> <code>pCreateInfo</code> is a pointer to a <a href="#MeshLoader_JobsCreateInfo">MeshLoader_JobsCreateInfo</a> structure controlling the creation of this batch of jobs. </li>
-        <li> <code>pAllocationCallbacks</code> controls memory allocation as described in the <a href="">Memory Allocation</a> chapter. </li>
-    </ul>
+);
+</pre>
 
-    ### 4.2.1. Valid Usage (Implicit)
-    <ul>
-        <li> <small> MLUID-MeshLoader_createJobs-instance </small> <br/>
-            <code>instance</code> <strong>must</strong> be a valid <a href="#MeshLoader_Instance">MeshLoader_Instance</a> handle.
-        </li>
-        <li> <small> MLUID-MeshLoader_createJobs-pCreateInfo </small> <br/>
-            <code>pCreateInfo</code> <strong>must</strong> be a valid pointer to a valid <a href="#MeshLoader_JobsCreateInfo">MeshLoader_JobsCreateInfo</a> structure.
-        </li>
-        <li> <small> MLUID-MeshLoader_createJobs-pAllocationCallbacks </small> <br/>
-            If <code>pAllocationCallbacks</code> is not <code>NULL</code>, <code>pAllocationCallbacks</code> <strong>must</strong> be a valid pointer
-            to a valid <a href="#MeshLoader_AllocationCallbacks">MeshLoader_AllocationCallbacks</a> structure.
-        </li>
-    </ul>
+            <ul>
+                <li> <code>instance</code> is a handle of a <i>valid</i> <code>MeshLoader_Instance</code> handle previously created with <a href="#MeshLoader_createInstance">MeshLoader_createInstance</a>. </li>
+                <li> <code>pCreateInfo</code> is a pointer to a <a href="#MeshLoader_JobsCreateInfo">MeshLoader_JobsCreateInfo</a> structure controlling the creation of this batch of jobs. </li>
+                <li> <code>pAllocationCallbacks</code> controls memory allocation as described in the <a href="">Memory Allocation</a> chapter. </li>
+            </ul>
 
-    ### 4.2.2. Return Codes
-    <a href="#successCodes">Success</a>
-    <ul>
-        <li> <code>MeshLoader_Result_Success</code> </li>
-    </ul>
-    <a href="#errorCodes">Failure</a>
-    <ul>
-        <li> <code>MeshLoader_Result_OutOfMemory</code> </li>
-        <li> <code>MeshLoader_Result_MutexError</code> </li>
-    </ul>
+            <h3> Valid Usage (Implicit) </h3>
+            <ul>
+                <li> <small> MLUID-MeshLoader_createJobs-instance </small> <br/>
+                    <code>instance</code> <strong>must</strong> be a valid <a href="#MeshLoader_Instance">MeshLoader_Instance</a> handle.
+                </li>
+                <li> <small> MLUID-MeshLoader_createJobs-pCreateInfo </small> <br/>
+                    <code>pCreateInfo</code> <strong>must</strong> be a valid pointer to a valid <a href="#MeshLoader_JobsCreateInfo">MeshLoader_JobsCreateInfo</a> structure.
+                </li>
+                <li> <small> MLUID-MeshLoader_createJobs-pAllocationCallbacks </small> <br/>
+                    If <code>pAllocationCallbacks</code> is not <code>NULL</code>, <code>pAllocationCallbacks</code> <strong>must</strong> be a valid pointer
+                    to a valid <a href="#MeshLoader_AllocationCallbacks">MeshLoader_AllocationCallbacks</a> structure.
+                </li>
+            </ul>
 
-    ## 4.3. Jobs Create Info
+            <h3> Return Codes </h3>
+            <a href="#successCodes">Success</a>
+            <ul>
+                <li> <code>MeshLoader_Result_Success</code> </li>
+            </ul>
+            <a href="#errorCodes">Failure</a>
+            <ul>
+                <li> <code>MeshLoader_Result_OutOfMemory</code> </li>
+                <li> <code>MeshLoader_Result_MutexError</code> </li>
+            </ul>
 
-    The MeshLoader_JobsCreateInfo structure is defined as:
-    <a id="MeshLoader_JobsCreateInfo"></a>
-    ```C
-    typedef struct {
+            <p> The <code> MeshLoader_JobsCreateInfo </code> structure is defined as:
+                <a id="MeshLoader_JobsCreateInfo"></a> </p>
+
+<pre lang="c">
+typedef struct {
     MeshLoader_StructureType            structureType;
     void                        const * pNext;
     MeshLoader_JobsCreateFlags          flags;
     MeshLoader_uint32                   jobCount;
     MeshLoader_Job                    * pJobs;
     MeshLoader_CreateJobInfo    const * pCreateJobInfos;
-    } MeshLoader_JobsCreateInfo;
-    ```
-    <ul>
-        <li> <code>structureType</code> is the type of the structure. </li>
-        <li> <code>pNext</code> is <code>NULL</code> or a pointer to a structure extending this structure. </li>
-        <li> <code>flags</code> is a bitmask of <a href="#MeshLoader_JobsCreateFlagBits">MeshLoader_JobsCreateFlagBits</a> indicating the behaviour of the batch create command. </li>
-        <li> <code>jobCount</code> is the unsigned integer count of the jobs to be created by this command. </li>
-        <li> <code>pJobs</code> is a pointer to an array of <a href="#MeshLoader_Job">MeshLoader_Job</a>, and is the memory area where the command's output will be saved, if successful. </li>
-        <li> <code>pCreateJobInfos</code> is a pointer to an array of <a href="#MeshLoader_CreateJobInfo">MeshLoader_CreateJobInfo</a> structures describing the intended behaviour of each of the jobs to be created </li>
-    </ul>
+} MeshLoader_JobsCreateInfo;
+</pre>
 
-    ### 4.3.1. Valid Usage (Implicit)
-    <ul>
-        <li> <small> MLUID-MeshLoader_JobsCreateInfo-structureType </small> <br/>
-            <code>structureType</code> <strong>must</strong> be <code>MeshLoader_StructureType_JobsCreateInfo</code>.
-        </li>
-        <li> <small> MLUID-MeshLoader_JobsCreateInfo-pNext </small> <br/>
-            <code>pNext</code> <strong>must</strong> be <code>NULL</code>.
-        </li>
-        <li> <small> MLUID-MeshLoader_JobsCreateInfo-flags </small> <br/>
-            <code>flags</code> <strong>must</strong> be a valid combination of <a href="#MeshLoader_JobsCreateFlagBits">MeshLoader_JobsCreateFlagBits</a> values.
-        </li>
-        <li> <small> MLUID-MeshLoader_JobsCreateInfo-jobCount </small> <br/>
-            <code>jobCount</code> <strong>must</strong> be greated than <code>0</code>.
-        </li>
-        <li> <small> MLUID-MeshLoader_JobsCreateInfo-pJobs </small> <br/>
-            <code>pJobs</code> <strong>must</strong> be a valid pointer to an array of valid <code>jobCount</code> <a href="#MeshLoader_Job">MeshLoader_Job</a> handles.
-        </li>
-        <li> <small> MLUID-MeshLoader_JobsCreateInfo-pCreateJobInfos </small> <br/>
-            <code>pCreateJobInfos</code> <strong>must</strong> be a valid pointer to an array of valid <code>jobCount</code> <a href="#MeshLoader_CreateJobInfo">MeshLoader_CreateJobInfo</a> structures.
-        </li>
-    </ul>
+            <ul>
+                <li> <code>structureType</code> is the type of the structure. </li>
+                <li> <code>pNext</code> is <code>NULL</code> or a pointer to a structure extending this structure. </li>
+                <li> <code>flags</code> is a bitmask of <a href="#MeshLoader_JobsCreateFlagBits">MeshLoader_JobsCreateFlagBits</a> indicating the behaviour of the batch create command. </li>
+                <li> <code>jobCount</code> is the unsigned integer count of the jobs to be created by this command. </li>
+                <li> <code>pJobs</code> is a pointer to an array of <a href="#MeshLoader_Job">MeshLoader_Job</a>, and is the memory area where the command's output will be saved, if successful. </li>
+                <li> <code>pCreateJobInfos</code> is a pointer to an array of <a href="#MeshLoader_CreateJobInfo">MeshLoader_CreateJobInfo</a> structures describing the intended behaviour of each of the jobs to be created </li>
+            </ul>
 
-    Bits that can be set in <a href="#MeshLoader_JobsCreateInfo">MeshLoader_JobsCreateInfo</a><code>::flags</code>, specifying creation usage of the Jobs, are:
-    <a id="MeshLoader_JobCreateFlagBits"></a>
-    ```C
-    typedef enum {
+            <h3> Valid Usage (Implicit) </h3>
+
+            <ul>
+                <li> <small> MLUID-MeshLoader_JobsCreateInfo-structureType </small> <br/>
+                    <code>structureType</code> <strong>must</strong> be <code>MeshLoader_StructureType_JobsCreateInfo</code>.
+                </li>
+                <li> <small> MLUID-MeshLoader_JobsCreateInfo-pNext </small> <br/>
+                    <code>pNext</code> <strong>must</strong> be <code>NULL</code>.
+                </li>
+                <li> <small> MLUID-MeshLoader_JobsCreateInfo-flags </small> <br/>
+                    <code>flags</code> <strong>must</strong> be a valid combination of <a href="#MeshLoader_JobsCreateFlagBits">MeshLoader_JobsCreateFlagBits</a> values.
+                </li>
+                <li> <small> MLUID-MeshLoader_JobsCreateInfo-jobCount </small> <br/>
+                    <code>jobCount</code> <strong>must</strong> be greated than <code>0</code>.
+                </li>
+                <li> <small> MLUID-MeshLoader_JobsCreateInfo-pJobs </small> <br/>
+                    <code>pJobs</code> <strong>must</strong> be a valid pointer to an array of valid <code>jobCount</code> <a href="#MeshLoader_Job">MeshLoader_Job</a> handles.
+                </li>
+                <li> <small> MLUID-MeshLoader_JobsCreateInfo-pCreateJobInfos </small> <br/>
+                    <code>pCreateJobInfos</code> <strong>must</strong> be a valid pointer to an array of valid <code>jobCount</code> <a href="#MeshLoader_CreateJobInfo">MeshLoader_CreateJobInfo</a> structures.
+                </li>
+            </ul>
+
+            <p> Bits that can be set in <a href="#MeshLoader_JobsCreateInfo">MeshLoader_JobsCreateInfo</a><code>::flags</code>, specifying creation usage of the Jobs, are:
+                <a id="MeshLoader_JobsCreateFlagBits"></a> </p>
+
+<pre lang="c">
+typedef enum {
     MeshLoader_JobsCreateFlag_ContinueIfError       = 0x00000001U,
-    } MeshLoader_JobsCreateFlagBits;
-    ```
-    <ul>
-        <li> <code>MeshLoader_JobsCreateFlag_ContinueIfError</code> specifies that, if a job creation fails, the other jobs will proceed to be created, and the subsequent failed creations will result
-            in a <code>NULL</code> handle stored for the respective jobs inside the <a href="#MeshLoader_JobsCreateInfo">MeshLoader_JobsCreateInfo</a><code>::pJobs</code> array. </li>
-    </ul>
+} MeshLoader_JobsCreateFlagBits;
+</pre>
 
-    The bitmask type used in <a href="#MeshLoader_JobsCreateInfo">MeshLoader_JobsCreateInfo</a><code>::flags</code> is defined as follows:
-    <a id="MeshLoader_JobCreateFlags"></a>
-    ```C
-    typedef MeshLoader_Flags                MeshLoader_JobsCreateFlags;
-    ```
+            <ul>
+                <li> <code>MeshLoader_JobsCreateFlag_ContinueIfError</code> specifies that, if a job creation fails, the other jobs will proceed to be created, and the subsequent failed creations will result
+                    in a <code>NULL</code> handle stored for the respective jobs inside the <a href="#MeshLoader_JobsCreateInfo">MeshLoader_JobsCreateInfo</a><code>::pJobs</code> array. </li>
+            </ul>
 
-    ## 4.4. Create Job Info
+            <p> The bitmask type used in <a href="#MeshLoader_JobsCreateInfo">MeshLoader_JobsCreateInfo</a><code>::flags</code> is defined as follows:
+                <a id="MeshLoader_JobCreateFlags"></a> </p>
 
-    The MeshLoader_CreateJobInfo is defined as:
-    <a id="MeshLoader_CreateJobInfo"></a>
-    ```C
-    typedef struct {
+<pre lang="c">
+typedef MeshLoader_Flags                MeshLoader_JobsCreateFlags;
+</pre>
+
+            <p> The <code>MeshLoader_CreateJobInfo</code> is defined as:
+                <a id="MeshLoader_CreateJobInfo"></a> </p>
+
+<pre lang="c">
+typedef struct {
     MeshLoader_StructureType            structureType;
     void                        const * pNext;
     MeshLoader_JobType                  jobType;
     MeshLoader_MeshLoadModeFlags        loadMode;
     MeshLoader_StringLiteral            inputPath;
     float                               priority;
-    } MeshLoader_CreateJobInfo;
-    ```
+} MeshLoader_CreateJobInfo;
+</pre>
 
-    <ul>
-        <li> <code>structureType</code> is the type of the structure. </li>
-        <li> <code>pNext</code> is <code>NULL</code> or a pointer to a structure extending this structure. </li>
-        <li> <code>jobType</code> is an enumerant value defined by <a href="#MeshLoader_JobType">MeshLoader_JobType</a>, specifying the job's type and file format. </li>
-        <li> <code>loadMode</code> is a bitmask of <a href="#MeshLoader_MeshLoadModeFlags">MeshLoader_MeshLoadModeFlags</a> indicating the load mode and operations to be done in the Job Execution. </li>
-        <li> <code>inputPath</code> is a pointer to a null-terminated UTF-8 <a href="#string">MeshLoader_StringLiteral</a> which contains the path, relative to the application or absolute, of the file that is used as input data for the job.  </li>
-        <li> <code>priority</code> is a float value specifying the priority of the Job, ranging from 0.0f (lowest) to 1.0f (highest). </li>
-    </ul>
+            <ul>
+                <li> <code>structureType</code> is the type of the structure. </li>
+                <li> <code>pNext</code> is <code>NULL</code> or a pointer to a structure extending this structure. </li>
+                <li> <code>jobType</code> is an enumerant value defined by <a href="#MeshLoader_JobType">MeshLoader_JobType</a>, specifying the job's type and file format. </li>
+                <li> <code>loadMode</code> is a bitmask of <a href="#MeshLoader_MeshLoadModeFlags">MeshLoader_MeshLoadModeFlags</a> indicating the load mode and operations to be done in the Job Execution. </li>
+                <li> <code>inputPath</code> is a pointer to a null-terminated UTF-8 <a href="#string">MeshLoader_StringLiteral</a> which contains the path, relative to the application or absolute, of the file that is used as input data for the job.  </li>
+                <li> <code>priority</code> is a float value specifying the priority of the Job, ranging from 0.0f (lowest) to 1.0f (highest). </li>
+            </ul>
 
-    ## 4.4.1. Valid Usage
+            <h3>Valid Usage</h3>
 
-    <ul>
-        <li> <small> MLUID-MeshLoader_CreateJobInfo-pNext-00004 </small> <br/>
-            If the <code>pNext</code> chain includes a <a href="#MeshLoader_CustomJobInfo">MeshLoader_CustomJobInfo</a> structure,
-            then <code>jobType</code> <strong>must</strong> be <code>MeshLoader_JobType_Custom</code>.
-        </li>
-        <li> <small> MLUID-MeshLoader_CreateJobInfo-jobType-00005 </small> <br/>
-            If <code>jobType</code> is <code>MeshLoader_JobType_Custom</code>, the <code>pNext</code> pNext
-            structure chain <strong>must</strong> not include
-        </li>
-    </ul>
+            <ul>
+                <li> <small> MLUID-MeshLoader_CreateJobInfo-pNext-00004 </small> <br/>
+                    If the <code>pNext</code> chain includes a <a href="#MeshLoader_CustomJobInfo">MeshLoader_CustomJobInfo</a> structure,
+                    then <code>jobType</code> <strong>must</strong> be <code>MeshLoader_JobType_Custom</code>.
+                </li>
+                <li> <small> MLUID-MeshLoader_CreateJobInfo-jobType-00005 </small> <br/>
+                    If <code>jobType</code> is <code>MeshLoader_JobType_Custom</code>, the <code>pNext</code> pNext
+                    structure chain <strong>must</strong> not include
+                </li>
+            </ul>
 
-    ## 4.4.2. Valid Usage (Implicit)
+            <h3>Valid Usage (Implicit)</h3>
 
-    <ul>
-        <li> <small> MLUID-MeshLoader_CreateJobInfo-structureType </small> <br/>
-            <code>structureType</code> <strong>must</strong> be <code>MeshLoader_StructureType_CreateJobInfo</code>.
-        </li>
-        <li> <small> MLUID-MeshLoader_CreateJobInfo-pNext </small> <br/>
-            Each <code>pNext</code> member of any structure (including this one) in the <code>pNext</code> chain <strong>must</strong>
-            be either <code>NULL</code> or a pointer to a valid instance of <a href="#MeshLoader_CustomJobInfo">MeshLoader_CustomJobInfo</a>.
-        </li>
-        <li> <small> MLUID-MeshLoader_CreateJobInfo-loadMode </small> <br/>
-            <code>loadMode</code> <strong>must</strong> be a valid combination of <a href="#MeshLoader_JobLoadModeFlagBits">MeshLoader_JobLoadModeFlagBits</a> values.
-        </li>
-        <li> <small> MLUID-MeshLoader_CreateJobInfo-inputPath </small> <br/>
-            <code>inputPath</code> <strong>must</strong> be a valid pointer to a null-terminated UTF-8 string.
-        </li>
-        <li> <small>MLUID-MeshLoader_CreateJobInfo-priority</small> <br/>
-            <code>priority</code> must be greater than 0.0f and less or equal than 1.0f.
-        </li>
-    </ul>
+            <ul>
+                <li> <small> MLUID-MeshLoader_CreateJobInfo-structureType </small> <br/>
+                    <code>structureType</code> <strong>must</strong> be <code>MeshLoader_StructureType_CreateJobInfo</code>.
+                </li>
+                <li> <small> MLUID-MeshLoader_CreateJobInfo-pNext </small> <br/>
+                    Each <code>pNext</code> member of any structure (including this one) in the <code>pNext</code> chain <strong>must</strong>
+                    be either <code>NULL</code> or a pointer to a valid instance of <a href="#MeshLoader_CustomJobInfo">MeshLoader_CustomJobInfo</a>.
+                </li>
+                <li> <small> MLUID-MeshLoader_CreateJobInfo-loadMode </small> <br/>
+                    <code>loadMode</code> <strong>must</strong> be a valid combination of <a href="#MeshLoader_JobLoadModeFlagBits">MeshLoader_JobLoadModeFlagBits</a> values.
+                </li>
+                <li> <small> MLUID-MeshLoader_CreateJobInfo-inputPath </small> <br/>
+                    <code>inputPath</code> <strong>must</strong> be a valid pointer to a null-terminated UTF-8 string.
+                </li>
+                <li> <small>MLUID-MeshLoader_CreateJobInfo-priority</small> <br/>
+                    <code>priority</code> must be greater than 0.0f and less or equal than 1.0f.
+                </li>
+            </ul>
 
-    <ul>
-        <li> <small> MLUID-MeshLoader_CreateJobInfo-structureType </small> <br/>
-        </li>
-    </ul>
+        </div>
+
+    </div>
 
 </div>
 
