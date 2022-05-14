@@ -1,0 +1,21 @@
+body{
+    height: 100vh;
+    overflow: hidden;
+}
+
+aside {
+    flex: 1 0 15%;
+}
+
+#specificationBody {
+    overflow-y: auto;
+}
+
+#wrapper {
+    display: flex;
+    height: 100%;
+}
+
+.nav-list {
+    list-style-type: none;
+}
