@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mesh Loader - Specification</title>
+</head>
+<body>
+
+<div id="specification">
+
+    <div id="introduction">
+
+        <h1> 1. Introduction </h1>
+
+    </div>
+
+
+    <div id="fundamentals">
+
+        <h1> 2. Fundamentals </h1>
+
+        <div id="environment">
+
+            <h2> 2.1. Environment </h2>
+
+            <p> The Mesh Loader library and the Mesh Loader library specification requires and assumes the following properties of the build and runtime environment: </p>
+
+            <ul>
+                <li>
+                    The environment <strong> must </strong> have runtime support for 8, 16, 32 and 64-bit signed and unsigned twos-complement integers
+                    <ul>
+                        <li> When building from source, most c11 implementations cover this requirement. </li>
+                        <li> When building from source, all c2x implementations cover this requirement. </li>
+                    </ul>
+                </li>
+
+                <li>
+                    The environment <strong> must </strong> have runtime support for 32 and 64-bit float point types.
+                    <ul>
+                        <li> When building from source, all c11 implementations cover this requirement. </li>
+                        <li> These are used in the implementation using their standard types. </li>
+                    </ul>
+                </li>
+                <li>
+                    The environment <strong> must </strong> have runtime support for the std-atomic library.
+                    <ul>
+                        <li> When building from source, all c11 implementations cover this requirement. </li>
+                    </ul>
+                </li>
+            </ul>
+
+        </div>
+
+        <div id="executionModel">
+            <h2> 2.2. Execution Model </h2>
+
+            <p> This section outlines the execution model of the Mesh Loader library. </p>
+
+            <p> The library uses a number of threads to load a number of mesh objects or other data in the background of the running application.
+                The data loaded is ordered, processed and stored in Job objects. These jobs are processed by Worker objects, each worker running on
+                an individual processor execution thread. </p>
+
+            <p> Jobs are processed in a piece-meal manner, each Worker acquiring a Job from a library Instance and processing a part of the
+                loading, releasing it afterwards back to the instance. This ensures resource-safe, efficient start, pause, resume and stop capabilities. </p>
+
+            <p> Jobs are also processed via priority, and by type. Furthermore, the API can be expanded with user-defined Custom Job functions,
+                that can be executed by the API from the Worker threads. </p>
+
+        </div>
+
+        <div id="objectModel">
+
+            <h2> 2.3. Object Model </h2>
+
+            <p> The instance, jobs and meshes are represented by Mesh Loader objects. At the API level, they are referred as handles. </p>
+
+            <p> Objects created from other objects are referred to as Child objects. The other used object is referred to as a Parent object
+                Child objects must be used only with their Parent objects, and not with other Parent objects. </p>
+
+        </div>
+
+        <div id="objectLifetime">
+
+            <h2> 2.4. Object Lifetime </h2>
+
+            <p> Objects are created or allocated by <code>MeshLoader_create*</code> or by <code>MeshLoader_allocate*</code> commands, respectively.
+                Once created, it is generally considered to be immutable, though the contents of certain object types are free to change.
+                Objects are destroyed or freed by <code>MeshLoader_destroy*</code> or by <code>MeshLoader_free*</code> commands, respectively. </p>
+
+            <p> It is an application's responsibility to track the lifetime of MeshLoader objects, and not to destroy them while they are still in use. </p>
+
+            <p> The ownership of application-owned memory is immediately acquired by any Mesh Loader command it is passed into. Ownership of such
+                memory <strong>must</strong> be released back to the application at the end of the duration of the command, so that the application
+                <strong>can</strong> alter or free this memory as soon as all the commands that acquired it have returned. </p>
+
+            <div>
+                <p> While any Jobs are in the pending state, the following objects <strong> must </strong> not be destroyed </p>
+                <ul>
+                    <li> <code>MeshLoader_Job</code> </li>
+                </ul>
+            </div>
+
+            <div>
+                <p> While any Jobs are in the pending state, the following objects <strong> should </strong> not be destroyed </p>
+                <ul>
+                    <li> <code>MeshLoader_Instance</code> </li>
+                </ul>
+            </div>
+
+        </div>
+
+        <div id="applicationBinaryInterface">
+
+            <h2> 2.5. Application Binary Interface </h2>
+
+            <p> Shared library implementations <strong>must</strong> use the default Application Binary Interface (ABI) of the standard
+                C compiler for the platform, or provide customized API headers that cause application code to use the implementation's non-default ABI. </p>
+        </div>
+
+        <div id="commandSyntaxAndDuration">
+
+            <h2> Command Syntax and Duration </h2>
+
+            <p> The Specification describes Mesh Loader commands and functions using C11 syntax. Language bindings may allow for stricter
+                parameter passing, or object-oriented interfaces. </p>
+
+            <p> The following base types are used / are given aliases to be used by the implementation </p>
+
+            <p> For 8, 16, 32 and 64-bit signed and unsigned integer types, the following type definitions are used <a id="int"></a> </p>
+
+<pre lang="c">
+typedef unsigned char                   MeshLoader_uint8;
+typedef unsigned short int              MeshLoader_uint16;
+typedef unsigned int                    MeshLoader_uint32;
+typedef unsigned long long int          MeshLoader_uint64;
+
+typedef signed char                     MeshLoader_sint8;
+typedef signed short int                MeshLoader_sint16;
+typedef signed int                      MeshLoader_sint32;
+typedef signed long long int            MeshLoader_sint64;
+</pre>
+
+            <p> For 32 and 64-bit floating point types, the standard C types are used <a id="float"></a> </p>
+
+<pre lang="c">
+float
+double
+</pre>
+
+            <p> For the boolean type, the following are defined. <a id="bool"></a> </p>
+
+<pre lang="c">
+typedef MeshLoader_uint8                MeshLoader_bool;
+#define MeshLoader_true                 0x01U
+#define MeshLoader_false                0x00U
+</pre>
+
+            <ul>
+                <li> <code>MeshLoader_true</code> is a constant representing MeshLoader_bool <strong>True</strong> value </li>
+                <li> <code>MeshLoader_false</code> is a constant representing MeshLoader_bool <strong>False</strong> value </li>
+            </ul>
+
+            <p> For representing sizes and address values, the following type is defined. <a id="size"></a> </p>
+
+<pre lang="c">
+    typedef MeshLoader_uint64               MeshLoader_size;
+</pre>
+
+            <p> For representing UTF-8 formatted constant strings, the following type is defined. <a id="string"></a> </p>
+
+<pre lang="c">
+    typedef char const *                    MeshLoader_StringLiteral;
+</pre>
+
+        </div>
+
+        <div id="validUsage">
+
+            <h2>2.7. Valid Usage</h2>
+
+            <div id="explicitValidUsage">
+
+                <h3>2.7.1. Explicit Valid Usage</h3>
+
+                <p> Explicit Valid Usage defines a set of conditions which <strong>must</strong> be met in order to achieve well-defined runtime behavior in
+                    an application. These conditions depend only on the Mesh Loader state, and the parameters of objects whose usage is constrained by
+                    the condition. </p>
+
+                <p> The core layer assumes applications are using the API correctly. Except as documented, the behavior of the core layer to an application
+                    using the API incorrectly is undefined, and <strong>may</strong> include program termination. </p>
+
+                <p> Explicit Valid Usage are described in a block labelled "Valid Usage" following each command or structure they apply to. </p>
+
+            </div>
+
+            <div id="implicitValidUsage" >
+
+                <h3>2.7.2. Implicit Valid Usage</h3>
+
+                <p> Some valid usage conditions apply to all commands and structures in the API, unless explicitly denoted otherwise for a specific
+                command or structure. These conditions are considered <i>implicit</i>, and are described in a block labelled "Valid Usage (Implicit)"
+                    following each command or structure they apply to. </p>
+
+                <p> Implicit valid usage conditions: </p>
+
+                <ul>
+                    <li>
+                        <h4> Valid Usage for Object Handles: </h4>
+
+                        <p> Any input parameter to a command that is an object handle <strong>must</strong> be a valid object handle, unless
+                            otherwise specified. An object handle is valid if: </p>
+
+                        <ul>
+                            <li> It has been created or allocated by a previous, successful call to the API. Such calls are noted in the Specification. </li>
+                            <li> It has not been deleted or freed by a previous call to the API. Such calls are noted in the Specification. </li>
+                            <li> Any objects used by that object, either as part of creation or execution, <strong>must</strong> also be valid. </li>
+                        </ul>
+
+                        <p> The reserved values <code>MeshLoader_invalidHandle</code>, <code>NULL</code> in C or <code>nullptr</code> in C++ can
+                            be used in place of handles, when explicitly called out in the Specification. Any command that creates an object successfully
+                            <strong> must </strong> not return these values. It is valid to pass these values to <code>MeshLoader_destroy*</code> or
+                            <code>MeshLoader_free*</code> commands, which will ignore these values. </p>
+                    </li>
+
+                    <li>
+                        <h4> Valid Usage for Pointers: </h4>
+                        <p> Any parameter that is a pointer <strong> must </strong> be a <i> valid pointer </i> only if it explicitly called out by a Valid Usage
+                            statement. </p>
+                        <p> A pointer is "valid" if it points at memory containing values of the number and type(s) expected by the command, and all
+                            the fundamental types accessed through the pointer satisfy the alignment requirements of the host processor. </p>
+                    </li>
+
+                    <li>
+                        <h4> Valid Usage for Strings: </h4>
+                        <p> Any parameter that is a pointer to char, or of type <code>MeshLoader_StringLiteral</code> <strong>must</strong> be a finite
+                            sequence of values terminated by a null character, or if explicitly called out in the Specification, <strong>can</strong> be <code>NULL</code>. </p>
+                    </li>
+
+                    <li>
+                        <h4> Valid Usage for Enumerated Types: </h4>
+                        <p> Any parameter of an enumerated type <strong>must</strong> be a valid enumerant for that type. A enumerant is valid if: </p>
+                        <ul>
+                            <li> The enumerant is defined as part of the enumerated type. </li>
+                        </ul>
+                    </li>
+
+                    <li>
+                        <h4> Valid Usage for Flags </h4>
+                        <p> A collection of flags is represented by a bitmask using the type <code> MeshLoader_flags </code> </p>
+
+                        <a id="flags"></a>
+
+<pre lang="c">
+typedef MeshLoader_uint32               MeshLoader_Flags;
+</pre>
+
+                        <p> Bitmasks are passed to many commands and structures to compactly represent options, but MeshLoader_Flags is not
+                            used directly in the API. Instead, a <code>MeshLoader_*Flags</code> type which is an alias for <code>MeshLoader_Flags</code>, and
+                            whose name matches with the corresponding <code>MeshLoader_*FlagBits</code> that are valid for that type, is used. </p>
+
+                        <p> Any <code>MeshLoader_*Flags</code> member or parameter used in the API as an input <strong>must</strong> be a valid combination
+                            of bit flags. A valid combination is either zero or the bitwise OR of valid bit flags. A bit flag is valid if: </p>
+
+                        <ul>
+                            <li>
+                                The bit flag is defined as part of the <code>MeshLoader_*FlagBits</code> type, where the bits type is obtained by taking
+                                the flag type and replacing the trailing <code>Flags</code> with <code>FlagBits</code>. For example, a flag value of type
+                                <a href="#MeshLoader_MeshLoadModeFlags">MeshLoader_MeshLoadModeFlags</a> <strong>must</strong> contain only bit flags defined by
+                                <a href="#MeshLoader_MeshLoadModeFlagBits">MeshLoader_MeshLoadModeFlagBits</a>.
+                            </li>
+                        </ul>
+
+                        <p> Only the low-order 31 bits ( bit positions zero through 30 ) are available for use as flag bits. </p>
+                    </li>
+
+                    <li>
+                        <h4> Valid Usage for Structure Types: </h4>
+                        <p> Any parameter that is a structure containing a <code>structureType</code> member <strong>must</strong> have a value
+                            of <code>structureType</code> which is a valid <a href="MeshLoader_StructureType">MeshLoader_StructureType</a> value matching
+                            the type of the structure. </p>
+                    </li>
+
+                    <li>
+                        <h4> Valid Usage for Structure Pointer Chains: </h4>
+
+                        <p> Any parameter that is a structure containing a <code>void * pNext</code> member <strong>must</strong> have a value of
+                            <code>pNext</code> that is either <code>NULL</code>, or is a pointer to a valid <i>extending structure</i>, containing
+                            <code>structureType</code> and <code>pNext</code>, in this order, as the first two members, aligned at 8 bytes. </p>
+
+                        <p> Each type of extended structure <strong>must</strong> not appear more than once in a <code>pNext</code> chain, including
+                            any aliases. This general rule may be explicitly overridden for specific structures. </p>
+                        <p> Any component of the implementation <strong>must</strong> skip over, without processing any extending structure in the
+                            chain that are not defined by the core interface component. </p>
+                        <p> As a convenience to implementations and layers needing to iterate through a structure pointer chain, the API provides two
+                            <i>base structure</i>. These structures allow for some type safety, and can be used by the API functions that operate on generic
+                            inputs and outputs: </p>
+
+                        <ul>
+                            <li>
+
+                                <p> The <code>MeshLoader_BaseInStructure</code> is defined as: <a id="MeshLoader_BaseInStructure"></a> </p>
+
+<pre lang="c">
+typedef struct MeshLoader_BaseInStructure {
+    MeshLoader_StructureType                    structureType;
+    struct MeshLoader_BaseInStructure   const * pNext;
+} MeshLoader_BaseInStructure;
+</pre>
+
+                                <ul>
+                                    <li> <code>structureType</code> is the structure type of the structure being iterated through. </li>
+                                    <li> <code>pNext</code> is <code>NULL</code> or a pointer to the next structure in the structure chain. </li>
+                                </ul>
+
+                                <p> The <code>MeshLoader_BaseInStructure</code> can be used to facilitate iterating through a read-only structure pointer chain. </p>
+                            </li>
+
+                            <li>
+
+                                <p> The <code>MeshLoader_BaseOutStructure</code> is defined as: <a id="MeshLoader_BaseOutStructure"></a> </p>
+
+<pre lang="c">
+typedef struct MeshLoader_BaseOutStructure {
+    MeshLoader_StructureType                    structureType;
+    struct MeshLoader_BaseOutStructure        * pNext;
+} MeshLoader_BaseOutStructure;
+</pre>
+
+                                <ul>
+                                    <li> <code>structureType</code> is the structure type of the structure being iterated through. </li>
+                                    <li> <code>pNext</code> is <code>NULL</code> or a pointer to the next structure in the structure chain. </li>
+                                </ul>
+
+                                <p> The <code>MeshLoader_BaseOutStructure</code> can be used to facilitate iterating through structure pointer chain that returns
+                                    data back to the application. </p>
+
+                            </li>
+
+                        </ul>
+                    </li>
+
+                    <li>
+                        <h4> Valid Usage for Nested Structures: </h4>
+
+                        <p> The above conditions apply recursively to members of structures provided as input to a command, either as a direct
+                            argument to the command, or themselves a member of another structure. </p>
+
+                        <p> Specifics on valid usage of each command are covered in their individual sections. </p>
+
+                    </li>
+
+                </ul>
+            </div>
+
+        </div>
+
+        <div id="returnCodes">
+
+            <h2> 2.8. MeshLoader_Result Return Codes </h2>
+
+            <p> While the core Mesh Loader API is not designed to capture incorrect usage, some circumstances still require return codes.
+                Commands return their status via return codes that are one in two categories: </p>
+
+            <ul>
+                <li> Successful completion codes are returned when a command needs to communicate success or status information. All successful completion codes are non-negative values. </li>
+                <li> Run time error codes are returned when a command needs to communicate a failure that could only be detected at runtime. All runtime error codes are negative values. </li>
+            </ul>
+
+            <p> All return codes in the Mesh Loader library are reported via <a href="#MeshLoader_Result">MeshLoader_Result</a> return values. The possible codes are: </p>
+            <a id="MeshLoader_Result"></a>
+
+            <pre lang="c">
+typedef enum {
+    MeshLoader_Result_Success                       = 0,
+    MeshLoader_Result_NotReady                      = 1,
+    MeshLoader_Result_TooSmall                      = 2,
+    MeshLoader_Result_JobNotStarted                 = 3,
+    MeshLoader_Result_ErrorUnknown                  = -1,
+    MeshLoader_Result_IllegalArgument               = -2,
+    MeshLoader_Result_TooManyObjects                = -3,
+    MeshLoader_Result_OutOfMemory                   = -4,
+    MeshLoader_Result_MutexError                    = -5,
+    MeshLoader_Result_PriorityQueueEmpty            = -6,
+    MeshLoader_Result_PriorityQueueFull             = -7,
+    MeshLoader_Result_ResourceNotFound              = -8,
+    MeshLoader_Result_JobExecutionFailed            = -9,
+} MeshLoader_Result;
+            </pre>
+
+            <a id="successCodes"></a>
+            <p> Success Codes </p>
+            <ul>
+                <li> <code>MeshLoader_Result_Success</code> - Command successfully completed. </li>
+                <li> <code>MeshLoader_Result_NotReady</code> - An operation has not been yet completed. </li>
+                <li> <code>MeshLoader_Result_TooSmall</code> - A return array was too small for the result. </li>
+                <li> <code>MeshLoader_Result_JobNotStarted</code> - A job that should be in Running or Higher state is only in Ready state. </li>
+            </ul>
+
+            <a id="errorCodes"></a>
+            <p> Error Codes </p>
+            <ul>
+                <li> <code>MeshLoader_Result_ErrorUnknown</code> - An unknown error has occurred; either the application has provided invalid input, or an implementation failure has occurred. </li>
+                <li> <code>MeshLoader_Result_IllegalArgument</code> - An argument passed to an API call violates the Valid Usage (Implicit) section of the respective call. This code <strong>must</strong> not be returned by a release variant library. </li>
+                <li> <code>MeshLoader_Result_TooManyObjects</code> - Too many objects of the type have already been created. </li>
+                <li> <code>MeshLoader_Result_OutOfMemory</code> - A memory allocation has failed. This <strong>must</strong> only be returned if no attempt to allocate the memory was made to accommodate the new allocation. </li>
+                <li> <code>MeshLoader_Result_MutexError</code> - The implementation failed to acquire exclusive access to a resource. This <strong>must</strong> not be returned by a release variant library. </li>
+                <li> <code>MeshLoader_Result_PriorityQueueEmpty</code> - The implementation failed to remove an element from an implementation Priority Queue. This <strong>must</strong> not be returned by a release variant library. </li>
+                <li> <code>MeshLoader_Result_PriorityQueueFull</code> - The implementation failed to add an element to an implementation Priority Queue. This <strong>must</strong> not be returned by a release variant library. </li>
+                <li> <code>MeshLoader_Result_ResourceNotFound</code> - A given resource could not be located by the implementation. This can be applied extensively, such as when an invalid path is given. This <strong>must</strong> not be returned by a release variant library.</li>
+                <li> <code>MeshLoader_Result_JobExecutionFailed</code> - A job failed during runtime execution, and was detected at this function call. </li>
+            </ul>
+
+        </div>
+
+        <div id="structureTypes">
+
+            <h2>2.9. Structure Types</h2>
+
+            <p> Each value corresponds to a particular structure with a <code>structureType</code> member with a matching name. As a general rule,
+                the name of each <a href="#MeshLoader_StructureType">MeshLoader_StructureType</a> value is obtained by taking the name of the structure, and adding
+                <code>_StructureType</code> between the <code>MeshLoader</code> and <code>_StructureName</code>. An example would be for the structure
+                <code>MeshLoader_JobsStartInfo</code>, whose associated <a href="#MeshLoader_StructureType">MeshLoader_StructureType</a> enumerant is
+                <code>MeshLoader_StructureType_JobsStartInfo</code>. The <code>structureType</code> must equal the enumerant's value when passed to the API. </p>
+
+            <p> Structure types supported are described by the following:
+                <a id="MeshLoader_StructureType"></a> </p>
+
+<pre lang="c">
+typedef enum {
+    MeshLoader_StructureType_Unknown                = 0x00000000U,
+
+    MeshLoader_StructureType_AllocationCallbacks    = 0x00000001U,
+
+    MeshLoader_StructureType_InstanceCreateInfo     = 0x00000002U,
+
+    MeshLoader_StructureType_JobsCreateInfo         = 0x00000003U,
+    MeshLoader_StructureType_JobsStartInfo          = 0x00000004U,
+    MeshLoader_StructureType_JobsPauseInfo          = 0x00000005U,
+    MeshLoader_StructureType_JobsResumeInfo         = 0x00000006U,
+    MeshLoader_StructureType_JobsStopInfo           = 0x00000007U,
+    MeshLoader_StructureType_JobsTerminateInfo      = 0x00000008U,
+    MeshLoader_StructureType_JobsQueryInfo          = 0x00000009U,
+
+    MeshLoader_StructureType_CreateJobInfo          = 0x00000010U,
+    MeshLoader_StructureType_QueryJobInfo           = 0x0000000AU,
+
+    MeshLoader_StructureType_AllocationNotification = 0x0000000CU,
+
+    MeshLoader_StructureType_JobData                = 0x00001000U,
+    MeshLoader_StructureType_CustomJobInfo          = 0x00001001U,
+} MeshLoader_StructureType;
+</pre>
+
+        </div>
+
+    </div>
+
+    <div id="instances">
+
+        <h1>3. Instances</h1>
+
+        <p> In order to use the library, an instance has to be created. There is no global state for the library. All objects are created from instances. </p>
+        <p> Instances are represented by <code>MeshLoader_Instance</code> handles: </p>
+
+        <a id="MeshLoader_Instance"></a>
+
+<pre lang="c">
+MESH_LOADER_DEFINE_HANDLE ( MeshLoader_Instance )
+</pre>
+
+        <div id="instanceCreation">
+
+            <h2>3.1. Instance Creation</h2>
+
+            <p> To create an instance object, call: </p>
+            <a id="MeshLoader_createInstance"></a>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_createInstance (
+    MeshLoader_InstanceCreateInfo   const * pCreateInfo,
+    MeshLoader_AllocationCallbacks  const * pAllocationCallbacks,
+    MeshLoader_Instance                   * pInstance
+);
+</pre>
+
+            <ul>
+                <li> <code>pCreateInfo</code> is a pointer to a <a href="#MeshLoader_InstanceCreateInfo">MeshLoader_InstanceCreateInfo</a> structure controlling the creation of the instance</li>
+                <li> <code>pAllocationCallbacks</code> controls memory allocation as described in the <a href="">Memory Allocation</a> chapter. </li>
+                <li> <code>pInstance</code> points to a <a href="#MeshLoader_Instance">MeshLoader_Instance</a> handle in which the resulting instance is returned. </li>
+            </ul>
+
+            <h3>3.1.1. Valid Usage (Implicit)</h3>
+
+            <ul>
+                <li> <small> MLUID-MeshLoader_createInstance-pCreateInfo-parameter </small> <br/>
+                    <code>pCreateInfo</code> <strong>must</strong> be a valid pointer to a valid <a href="#MeshLoader_InstanceCreateInfo">MeshLoader_InstanceCreateInfo</a> structure
+                </li>
+                <li> <small> MLUID-MeshLoader_createInstance-pAllocationCallbacks-parameter </small> <br/>
+                    If <code>pAllocationCallbacks</code> is not <code>NULL</code>, <code>pAllocationCallbacks</code> <strong>must</strong> be a valid pointer to a valid <a href="">MeshLoader_AllocationCallbacks</a> structure
+                </li>
+                <li> <small> MLUID-MeshLoader_createInstance-pInstance-parameter </small> <br/>
+                    <code>pInstance</code> <strong>must</strong> be a valid pointer to a <a href="#MeshLoader_Instance">MeshLoader_Instance</a> handle
+                </li>
+            </ul>
+
+            <h3> 3.1.2. Return Codes </h3>
+            <a href="#successCodes">Success</a>
+            <ul>
+                <li> <code>MeshLoader_Result_Success</code> </li>
+            </ul>
+            <a href="#errorCodes">Failure</a>
+            <ul>
+                <li> <code>MeshLoader_Result_OutOfMemory</code> </li>
+                <li> <code>MeshLoader_Result_MutexError</code> </li>
+            </ul>
+
+        </div>
+
+        <div id="instanceCreateInfo">
+
+            <h2> 3.2. Instance Create Info </h2>
+
+            <p> The <code>MeshLoader_InstanceCreateInfo</code> structure is defined as: </p>
+            <a id="MeshLoader_InstanceCreateInfo"></a>
+
+<pre lang="c">
+typedef struct {
+    MeshLoader_StructureType            structureType;
+    void                        const * pNext;
+    MeshLoader_InstanceCreateFlags      flags;
+    MeshLoader_uint32                   maxWorkerThreadCount;
+} MeshLoader_InstanceCreateInfo;
+</pre>
+
+            <ul>
+                <li> <code>structureType</code> is the type of the structure. </li>
+                <li> <code>pNext</code> is <code>NULL</code> or a pointer to a structure extending this structure. </li>
+                <li> <code>flags</code> is reserved for future use. </li>
+                <li> <code>maxWorkerThreadCount</code> is the maximum number of threads the Instance is allowed to use for <a href="">Worker</a> objects. If value is 0, the instance will use 1/4 of the maximum processor capable concurrent threads ( logical core count ) </li>
+            </ul>
+
+            <h3> 3.2.1. Valid Usage (Implicit) </h3>
+            <ul>
+                <li> <small> MLUID-MeshLoader_InstanceCreateInfo-structureType </small> <br/>
+                    <code>structureType</code> <strong>must</strong> be <code>MeshLoader_StructureType_InstanceCreateInfo</code>
+                </li>
+                <li> <small> MLUID-MeshLoader_InstanceCreateInfo-pNext </small> <br/>
+                    <code>pNext</code> <strong>must</strong> be <code>NULL</code>
+                </li>
+                <li> <small> MLUID-MeshLoader_InstanceCreateInfo-flags </small> <br/>
+                    <code>flags</code> <strong>must</strong> be <code>0</code>
+                </li>
+            </ul>
+
+            <a id="MeshLoader_InstanceCreateFlags"></a>
+            <p> The <code>MeshLoader_InstanceCreateFlags</code> type is reserved for future use. </p>
+
+<pre lang="c">
+typedef MeshLoader_Flags                MeshLoader_InstanceCreateFlags;
+</pre>
+
+        </div>
+
+        <div id="instanceDestruction">
+
+            <h2> 3.3. Instance Destruction </h2>
+
+            <p> To destroy an instance, call: </p>
+            <a id="MeshLoader_destroyInstance"></a>
+
+<pre lang="c">
+void MeshLoader_destroyInstance (
+    MeshLoader_Instance                     instance,
+    MeshLoader_AllocationCallbacks  const * pAllocationCallbacks
+);
+</pre>
+
+            <ul>
+                <li> <code>instance</code> is the handle of the instance to destroy </li>
+                <li> <code>pAllocationCallbacks</code> controls memory allocation as described in the <a href="">Memory Allocation</a> chapter. </li>
+            </ul>
+
+            <h3> 3.3.1. Valid Usage </h3>
+            <ul>
+                <li> <small> MLUID-MeshLoader_destroyInstance-instance-00001 </small> <br/>
+                    All child objects created using <code>instance</code> <strong>must</strong> have been destroyed prior to this call.
+                </li>
+                <li> <small> MLUID-MeshLoader_destroyInstance-instance-00002 </small> <br/>
+                    If <code>MeshLoader_AllocationCallbacks</code> were provided when <code>instance</code> was created, a compatible set of
+                    callbacks <strong>must</strong> be provided as a parameter for this call.
+                </li>
+                <li> <small> MLUID-MeshLoader_destroyInstance-instance-00003 </small> <br/>
+                    If no <code>MeshLoader_AllocationCallbacks</code> were provided when <code>instance</code> was created, <code>pAllocationCallbacks</code> <strong>must</strong> be <code>NULL</code>.
+                </li>
+            </ul>
+
+            <h3> 3.3.2. Valid Usage (Implicit) </h3>
+            <ul>
+                <li> <small> MLUID-MeshLoader_destroyInstance-instance-parameter </small> <br/>
+                    If <code>instance</code> is not <code>NULL</code>, <code>instance</code> <strong>must</strong> be a valid <a href="#MeshLoader_Instance">MeshLoader_Instance</a>
+                    handle.
+                </li>
+                <li> <small> MLUID-MeshLoader_destroyInstance-pAllocationCallbacks-parameter </small> <br/>
+                    If <code>pAllocationCallbacks</code> is not <code>NULL</code>, <code>pAllocationCallbacks</code> <strong>must</strong> be a valid pointer to a valid
+                    <a href="#MeshLoader_AllocationCallbacks">MeshLoader_AllocationCallbacks</a> structure.
+                </li>
+            </ul>
+
+        </div>
+
+    </div>
+
+    # 4. Jobs
+
+    A Job is a description of the task that has to be computed in the background by the library in order to load a single object.
+    Once created, it has to be started, and the result can be observed or fully acquired from it. The job type determines the
+    task that the Worker Thread will execute in order to load the requested file.
+
+    The job types can be expanded by defining a <a href="#customJobs">Custom Job</a>.
+
+    Jobs are created using an instance, and are Child objects to the used Instance. The application <strong>must</strong>, as a result
+    , destroy all jobs created from an instance before destroying an instance.
+
+    Jobs are represented by <code>MeshLoader_Job</code> handles:
+    <a id="MeshLoader_Job"></a>
+
+    ```C
+    MESH_LOADER_DEFINE_HANDLE ( MeshLoader_Job )
+    ```
+
+    ## 4.1. Job Lifetime & Execution
+
+    Since a lot of objects have to be loaded, jobs <i>should</i> be created, started and queried in large batches. Since
+    they operate on a priority basis, there is some control over the order in which jobs will be handled and be finished.
+
+    The following states are defined for a job:
+    - Ready - the job is created and awaiting launch
+    - Running - the job is being treated by a Worker or is waiting for a Worker to handle it
+    - Paused - the job is not being treated by any Worker and will not be picked up by one until it is resumed to Running
+    - Stopped - the job is not being treated by any Worker and cannot be picked up anymore until it is restarted, or is destroyed
+    - Terminated - the job is not being treated by any Worker and <i>should</i> not be restarted.
+    - Finished - the job has is finished, and its results can be observed or acquired. It can be restarted afterwards.
+    - FinishedError - the job has encountered an error, and must be cleared of its error state before being restarted, or just destroyed.
+
+    The following actions are defined for interacting with a job from the API:
+    - Create
+    - Start
+    - Pause
+    - Resume
+    - Stop
+    - Terminate
+    - Destroy
+    - Get Error
+
+    State Transition Table
+
+    | Action/State                    | Ready                       | Running                     | Paused                      | Stopped                     | Terminated | Finished                    | Finished Error              |
+    |---------------------------------|-----------------------------|-----------------------------|-----------------------------|-----------------------------|------------|-----------------------------|-----------------------------|
+    | <strong>Create</strong>         | undefined                   | undefined                   | undefined                   | undefined                   | undefined  | undefined                   | undefined                   |
+    | <strong>Start</strong>          | <strong>Running</strong>    | <strong>Running</strong>    | undefined                   | <strong>Running</strong>    | undefined  | <strong>Running</strong>    | undefined                   |
+    | <strong>Pause</strong>          | undefined                   | <strong>Paused</strong>     | <strong>Paused</strong>     | <strong>Stopped</strong>    | undefined  | <strong>Finished</strong>   | undefined                   |
+    | <strong>Resume</strong>         | <strong>Ready</strong>      | <strong>Running</strong>    | <strong>Running</strong>    | <strong>Stopped</strong>    | undefined  | <strong>Finished</strong>   | undefined                   |
+    | <strong>Stop</strong>           | <strong>Ready</strong>      | <strong>Stopped</strong>    | <strong>Stopped</strong>    | <strong>Stopped</strong>    | undefined  | <strong>Finished</strong>   | undefined                   |
+    | <strong>Terminate</strong>      | <strong>Terminated</strong> | <strong>Terminated</strong> | <strong>Terminated</strong> | <strong>Terminated</strong> | undefined  | <strong>Terminated</strong> | <strong>Terminated</strong> |
+    | <strong>Destroy</strong>        | undefined                   | undefined                   | undefined                   | undefined                   | undefined  | undefined                   | undefined                   |
+    | <strong>Get Error</strong>      | <strong>Ready</strong>      | <strong>Running</strong>    | <strong>Paused</strong>     | <strong>Stopped</strong>    | undefined  | <strong>Finished</strong>   | <strong>Ready</strong>      |
+
+    ## 4.2. Job Creation
+
+    To create a number of Job objects, call:
+    <a id="MeshLoader_createJobs"></a>
+    ```C
+    MeshLoader_Result MeshLoader_createJobs (
+    MeshLoader_Instance                     instance,
+    MeshLoader_JobsCreateInfo       const * pCreateInfo,
+    MeshLoader_AllocationCallbacks  const * pAllocationCallbacks
+    );
+    ```
+    <ul>
+        <li> <code>instance</code> is a handle of a <i>valid</i> <code>MeshLoader_Instance</code> handle previously created with <a href="#MeshLoader_createInstance">MeshLoader_createInstance</a>. </li>
+        <li> <code>pCreateInfo</code> is a pointer to a <a href="#MeshLoader_JobsCreateInfo">MeshLoader_JobsCreateInfo</a> structure controlling the creation of this batch of jobs. </li>
+        <li> <code>pAllocationCallbacks</code> controls memory allocation as described in the <a href="">Memory Allocation</a> chapter. </li>
+    </ul>
+
+    ### 4.2.1. Valid Usage (Implicit)
+    <ul>
+        <li> <small> MLUID-MeshLoader_createJobs-instance </small> <br/>
+            <code>instance</code> <strong>must</strong> be a valid <a href="#MeshLoader_Instance">MeshLoader_Instance</a> handle.
+        </li>
+        <li> <small> MLUID-MeshLoader_createJobs-pCreateInfo </small> <br/>
+            <code>pCreateInfo</code> <strong>must</strong> be a valid pointer to a valid <a href="#MeshLoader_JobsCreateInfo">MeshLoader_JobsCreateInfo</a> structure.
+        </li>
+        <li> <small> MLUID-MeshLoader_createJobs-pAllocationCallbacks </small> <br/>
+            If <code>pAllocationCallbacks</code> is not <code>NULL</code>, <code>pAllocationCallbacks</code> <strong>must</strong> be a valid pointer
+            to a valid <a href="#MeshLoader_AllocationCallbacks">MeshLoader_AllocationCallbacks</a> structure.
+        </li>
+    </ul>
+
+    ### 4.2.2. Return Codes
+    <a href="#successCodes">Success</a>
+    <ul>
+        <li> <code>MeshLoader_Result_Success</code> </li>
+    </ul>
+    <a href="#errorCodes">Failure</a>
+    <ul>
+        <li> <code>MeshLoader_Result_OutOfMemory</code> </li>
+        <li> <code>MeshLoader_Result_MutexError</code> </li>
+    </ul>
+
+    ## 4.3. Jobs Create Info
+
+    The MeshLoader_JobsCreateInfo structure is defined as:
+    <a id="MeshLoader_JobsCreateInfo"></a>
+    ```C
+    typedef struct {
+    MeshLoader_StructureType            structureType;
+    void                        const * pNext;
+    MeshLoader_JobsCreateFlags          flags;
+    MeshLoader_uint32                   jobCount;
+    MeshLoader_Job                    * pJobs;
+    MeshLoader_CreateJobInfo    const * pCreateJobInfos;
+    } MeshLoader_JobsCreateInfo;
+    ```
+    <ul>
+        <li> <code>structureType</code> is the type of the structure. </li>
+        <li> <code>pNext</code> is <code>NULL</code> or a pointer to a structure extending this structure. </li>
+        <li> <code>flags</code> is a bitmask of <a href="#MeshLoader_JobsCreateFlagBits">MeshLoader_JobsCreateFlagBits</a> indicating the behaviour of the batch create command. </li>
+        <li> <code>jobCount</code> is the unsigned integer count of the jobs to be created by this command. </li>
+        <li> <code>pJobs</code> is a pointer to an array of <a href="#MeshLoader_Job">MeshLoader_Job</a>, and is the memory area where the command's output will be saved, if successful. </li>
+        <li> <code>pCreateJobInfos</code> is a pointer to an array of <a href="#MeshLoader_CreateJobInfo">MeshLoader_CreateJobInfo</a> structures describing the intended behaviour of each of the jobs to be created </li>
+    </ul>
+
+    ### 4.3.1. Valid Usage (Implicit)
+    <ul>
+        <li> <small> MLUID-MeshLoader_JobsCreateInfo-structureType </small> <br/>
+            <code>structureType</code> <strong>must</strong> be <code>MeshLoader_StructureType_JobsCreateInfo</code>.
+        </li>
+        <li> <small> MLUID-MeshLoader_JobsCreateInfo-pNext </small> <br/>
+            <code>pNext</code> <strong>must</strong> be <code>NULL</code>.
+        </li>
+        <li> <small> MLUID-MeshLoader_JobsCreateInfo-flags </small> <br/>
+            <code>flags</code> <strong>must</strong> be a valid combination of <a href="#MeshLoader_JobsCreateFlagBits">MeshLoader_JobsCreateFlagBits</a> values.
+        </li>
+        <li> <small> MLUID-MeshLoader_JobsCreateInfo-jobCount </small> <br/>
+            <code>jobCount</code> <strong>must</strong> be greated than <code>0</code>.
+        </li>
+        <li> <small> MLUID-MeshLoader_JobsCreateInfo-pJobs </small> <br/>
+            <code>pJobs</code> <strong>must</strong> be a valid pointer to an array of valid <code>jobCount</code> <a href="#MeshLoader_Job">MeshLoader_Job</a> handles.
+        </li>
+        <li> <small> MLUID-MeshLoader_JobsCreateInfo-pCreateJobInfos </small> <br/>
+            <code>pCreateJobInfos</code> <strong>must</strong> be a valid pointer to an array of valid <code>jobCount</code> <a href="#MeshLoader_CreateJobInfo">MeshLoader_CreateJobInfo</a> structures.
+        </li>
+    </ul>
+
+    Bits that can be set in <a href="#MeshLoader_JobsCreateInfo">MeshLoader_JobsCreateInfo</a><code>::flags</code>, specifying creation usage of the Jobs, are:
+    <a id="MeshLoader_JobCreateFlagBits"></a>
+    ```C
+    typedef enum {
+    MeshLoader_JobsCreateFlag_ContinueIfError       = 0x00000001U,
+    } MeshLoader_JobsCreateFlagBits;
+    ```
+    <ul>
+        <li> <code>MeshLoader_JobsCreateFlag_ContinueIfError</code> specifies that, if a job creation fails, the other jobs will proceed to be created, and the subsequent failed creations will result
+            in a <code>NULL</code> handle stored for the respective jobs inside the <a href="#MeshLoader_JobsCreateInfo">MeshLoader_JobsCreateInfo</a><code>::pJobs</code> array. </li>
+    </ul>
+
+    The bitmask type used in <a href="#MeshLoader_JobsCreateInfo">MeshLoader_JobsCreateInfo</a><code>::flags</code> is defined as follows:
+    <a id="MeshLoader_JobCreateFlags"></a>
+    ```C
+    typedef MeshLoader_Flags                MeshLoader_JobsCreateFlags;
+    ```
+
+    ## 4.4. Create Job Info
+
+    The MeshLoader_CreateJobInfo is defined as:
+    <a id="MeshLoader_CreateJobInfo"></a>
+    ```C
+    typedef struct {
+    MeshLoader_StructureType            structureType;
+    void                        const * pNext;
+    MeshLoader_JobType                  jobType;
+    MeshLoader_MeshLoadModeFlags        loadMode;
+    MeshLoader_StringLiteral            inputPath;
+    float                               priority;
+    } MeshLoader_CreateJobInfo;
+    ```
+
+    <ul>
+        <li> <code>structureType</code> is the type of the structure. </li>
+        <li> <code>pNext</code> is <code>NULL</code> or a pointer to a structure extending this structure. </li>
+        <li> <code>jobType</code> is an enumerant value defined by <a href="#MeshLoader_JobType">MeshLoader_JobType</a>, specifying the job's type and file format. </li>
+        <li> <code>loadMode</code> is a bitmask of <a href="#MeshLoader_MeshLoadModeFlags">MeshLoader_MeshLoadModeFlags</a> indicating the load mode and operations to be done in the Job Execution. </li>
+        <li> <code>inputPath</code> is a pointer to a null-terminated UTF-8 <a href="#string">MeshLoader_StringLiteral</a> which contains the path, relative to the application or absolute, of the file that is used as input data for the job.  </li>
+        <li> <code>priority</code> is a float value specifying the priority of the Job, ranging from 0.0f (lowest) to 1.0f (highest). </li>
+    </ul>
+
+    ## 4.4.1. Valid Usage
+
+    <ul>
+        <li> <small> MLUID-MeshLoader_CreateJobInfo-pNext-00004 </small> <br/>
+            If the <code>pNext</code> chain includes a <a href="#MeshLoader_CustomJobInfo">MeshLoader_CustomJobInfo</a> structure,
+            then <code>jobType</code> <strong>must</strong> be <code>MeshLoader_JobType_Custom</code>.
+        </li>
+        <li> <small> MLUID-MeshLoader_CreateJobInfo-jobType-00005 </small> <br/>
+            If <code>jobType</code> is <code>MeshLoader_JobType_Custom</code>, the <code>pNext</code> pNext
+            structure chain <strong>must</strong> not include
+        </li>
+    </ul>
+
+    ## 4.4.2. Valid Usage (Implicit)
+
+    <ul>
+        <li> <small> MLUID-MeshLoader_CreateJobInfo-structureType </small> <br/>
+            <code>structureType</code> <strong>must</strong> be <code>MeshLoader_StructureType_CreateJobInfo</code>.
+        </li>
+        <li> <small> MLUID-MeshLoader_CreateJobInfo-pNext </small> <br/>
+            Each <code>pNext</code> member of any structure (including this one) in the <code>pNext</code> chain <strong>must</strong>
+            be either <code>NULL</code> or a pointer to a valid instance of <a href="#MeshLoader_CustomJobInfo">MeshLoader_CustomJobInfo</a>.
+        </li>
+        <li> <small> MLUID-MeshLoader_CreateJobInfo-loadMode </small> <br/>
+            <code>loadMode</code> <strong>must</strong> be a valid combination of <a href="#MeshLoader_JobLoadModeFlagBits">MeshLoader_JobLoadModeFlagBits</a> values.
+        </li>
+        <li> <small> MLUID-MeshLoader_CreateJobInfo-inputPath </small> <br/>
+            <code>inputPath</code> <strong>must</strong> be a valid pointer to a null-terminated UTF-8 string.
+        </li>
+        <li> <small>MLUID-MeshLoader_CreateJobInfo-priority</small> <br/>
+            <code>priority</code> must be greater than 0.0f and less or equal than 1.0f.
+        </li>
+    </ul>
+
+    <ul>
+        <li> <small> MLUID-MeshLoader_CreateJobInfo-structureType </small> <br/>
+        </li>
+    </ul>
+
+</div>
+
+<script src="../scripts/syntaxHighlighter/coloring/darcula.js"></script>
+<script src="../scripts/syntaxHighlighter/languages/c.js"></script>
+<script src="../scripts/syntaxHighlighter/syntax.js"></script>
+<script src="scripts/pageTheme.js"></script>
+
+</body>
+</html>
