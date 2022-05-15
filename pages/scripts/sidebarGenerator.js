@@ -15,6 +15,7 @@ function generateSidebarContentsInner ( list, element ) {
             sublist.className = "nav-list"
 
             let listItem = document.createElement("li");
+            listItem.className = 'nav-item'
             list.appendChild(listItem)
 
             let linkToChapter = document.createElement("a");

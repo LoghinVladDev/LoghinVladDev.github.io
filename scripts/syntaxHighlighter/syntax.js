@@ -53,7 +53,14 @@ function splitByTokens ( codeString, tokenRules ) {
     return tokens
 }
 
-function parse ( codeString, tokenRules, colorSet ) {
+function applyClassToToken ( token, tokenRules ) {
+    return "<span class='" +
+        "code-" +
+        tokenRules.types.explicitClassName(token) +
+        "'>" + token.value + "</span>"
+}
+
+function parse ( codeString, tokenRules ) {
     let tokens = splitByTokens ( codeString, tokenRules )
     if ( Object.keys ( tokenRules.types ).includes ( "applySpecialTokenRules" ) ) {
         tokenRules.types.applySpecialTokenRules ( tokens )
@@ -61,30 +68,28 @@ function parse ( codeString, tokenRules, colorSet ) {
 
     let finalText = ""
     for ( let token of tokens ) {
-        finalText += colorSet.apply ( token, tokenRules )
+        finalText += applyClassToToken ( token, tokenRules )
     }
 
     return finalText
 }
 
-function applySyntaxHighlighting ( colorSet = darculaColorSet ) {
+function applySyntaxClassification () {
     for ( let element of document.getElementsByTagName("pre") ) {
-        element.innerHTML   = applySyntaxForCode(element.innerHTML, element.lang, colorSet)
-
-        colorSet.applyForElement ( element )
+        element.innerHTML   = applySyntaxForCode(element.innerHTML, element.lang)
     }
 }
 
-function applySyntaxForCode ( codeString, language, colorSet ) {
+function applySyntaxForCode ( codeString, language ) {
 
     codeString = codeString.replaceAll ( '&lt;', '<' )
     codeString = codeString.replaceAll ( '&gt;', '>' )
 
     if ( language.toLowerCase() === "c" ) {
-        return parse ( codeString, cTokenRules, colorSet )
+        return parse ( codeString, cTokenRules )
     }
 
     return codeString;
 }
 
-applySyntaxHighlighting();
+applySyntaxClassification();

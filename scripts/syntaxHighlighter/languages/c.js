@@ -13,6 +13,23 @@ const cTokenRules = {
         functionIdentifier  : 10,
         stringConstant      : 11,
 
+        explicitClassName: ( token ) => {
+
+            switch ( token.type ) {
+                case cTokenRules.types.preprocessor:       return "preprocessor";
+                case cTokenRules.types.keyword:            return "keyword";
+                case cTokenRules.types.identifier:         return "identifier";
+                case cTokenRules.types.character:          return "character";
+                case cTokenRules.types.whitespace:         return "whitespace";
+                case cTokenRules.types.macro:              return "macro";
+                case cTokenRules.types.numberConstant:     return "number-constant";
+                case cTokenRules.types.operator:           return "operator";
+                case cTokenRules.types.enumerant:          return "enumerant";
+                case cTokenRules.types.functionIdentifier: return "function-identifier";
+                case cTokenRules.types.stringConstant:     return "string-constant";
+            }
+        },
+
         applySpecialTokenRules: (tokens) => {
             for ( let i = 0; i < tokens.length - 1 ; ++i ) {
 

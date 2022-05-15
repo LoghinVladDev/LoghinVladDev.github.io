@@ -1,15 +1,31 @@
 body{
     height: 100vh;
     overflow: hidden;
+    margin: 0;
+    padding: 0;
 }
 
 aside {
     flex: 1 0 20em;
+    max-width: 20em;
     overflow-y: auto;
+    padding: 0.5em;
+    border-left: 0;
+    border-top: 0;
+    border-bottom: 0;
+    border-right: 2px;
+    border-style: solid;
 }
 
 #specificationBody {
     overflow-y: auto;
+    width: 100%;
+}
+
+#specificationBody > * {
+    max-width: 60em;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 #wrapper {
@@ -19,4 +35,53 @@ aside {
 
 .nav-list {
     list-style-type: none;
+}
+
+a {
+    text-decoration: none;
+}
+
+pre {
+    border: 2px solid;
+    border-radius: 5px;
+    padding: 0.2em 0.5em;
+}
+
+table {
+    border: 4px solid;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    border-collapse: collapse;
+    border-radius: 5px;
+}
+
+td {
+    border: 2px solid;
+    border-bottom: 0;
+    border-top: 0;
+    text-align: center;
+}
+
+th {
+    border: 2px solid;
+    text-align: center;
+}
+
+aside > .nav-list {
+    padding: 0;
+    margin: 0;
+}
+
+.nav-list {
+    padding-left: 2em;
+}
+
+.nav-item {
+    margin-top: 0.2em;
+}
+
+aside > h3 {
+    text-align: center;
+    margin: 0.5em;
 }
