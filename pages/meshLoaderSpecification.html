@@ -2192,7 +2192,7 @@ typedef struct {
 
             <div>
 
-                <h2 id="userDefinedJobs-customJobCreation"> 7.2. Custom Job Creation </h2>
+                <h2 id="userDefinedJobs-customJobCreation"> 7.1. Custom Job Creation </h2>
 
                 <p> To create a custom job, add the <code>MeshLoader_CustomJobInfo</code> to the
                     <a href="#MeshLoader_JobsCreateInfo">MeshLoader_JobsCreateInfo</a><code>::pNext</code> chain when
@@ -2780,7 +2780,7 @@ MeshLoader_Result MeshLoader_Job_setMeshVertexData (
                 <ul>
                     <li> <code>jobContext</code> is a <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle given as
                         a parameter in the <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>. </li>
-                    <li> <code>vertexCount</code> is a integer specifying the number of vertices loaded by the Job. </li>
+                    <li> <code>vertexCount</code> is an integer specifying the number of vertices loaded by the Job. </li>
                     <li> <code>pInputPath</code> is a pointer to an array of <a href="#MeshLoader_VertexData">MeshLoader_VertexData</a> structures containing
                         the vertices of the mesh.</li>
                 </ul>
@@ -2829,7 +2829,7 @@ MeshLoader_Result MeshLoader_Job_setMeshFaceData (
                 <ul>
                     <li> <code>jobContext</code> is a <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle given as
                         a parameter in the <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>. </li>
-                    <li> <code>faceCount</code> is a integer specifying the number of faces loaded by the Job. </li>
+                    <li> <code>faceCount</code> is an integer specifying the number of faces loaded by the Job. </li>
                     <li> <code>pFaces</code> is a pointer to an array of <a href="#MeshLoader_FaceData">MeshLoader_FaceData</a> structures containing
                         the faces of the mesh.</li>
                 </ul>
@@ -2912,13 +2912,80 @@ MeshLoader_Result MeshLoader_Job_setMeshIndexData (
                     <li> <code>MeshLoader_Result_Success</code> </li>
                 </ul>
 
+                <p> To mark a job as finished, call:
+                    <a id="MeshLoader_Job_finish"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_Job_finish (
+        MeshLoader_Job_Context          jobContext
+);
+</pre>
+
+                <ul>
+                    <li> <code>jobContext</code> is a <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle given as
+                        a parameter in the <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>. </li>
+                </ul>
+
+                <p> This function will cause the Mesh Loader Library implementation stop calling this function, and mark the executed Job as
+                    <strong class="strong-state-description">Finished</strong>. Any resources that are scoped to the Job and are persistent <strong>must</strong>
+                    be released, cleared or freed prior to this call. </p>
+
+                <h3>Valid Usage</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_finish-pointerLifetime-00036</small> <br/>
+                        Any memory allocated before this call that is scoped to this Job <strong>must</strong> be freed before this call. </li>
+                    <li> <small>MLUID-MeshLoader_Job_finish-garbageCollector-00037</small> <br/>
+                        Any memory allocated before this call using <a href="#MeshLoader_Job_allocateMemory">MeshLoader_Job_allocateMemory</a>,
+                        <a href="#MeshLoader_Job_allocateMemory2">MeshLoader_Job_allocateMemory2</a>, <a href="#MeshLoader_Job_reallocateMemory">MeshLoader_Job_reallocateMemory</a> or
+                        <a href="#MeshLoader_Job_reallocateMemory2">MeshLoader_Job_reallocateMemory2</a>, that is not to be freed <strong>must</strong>
+                        be released from the scope of the Worker using <a href="#MeshLoader_Job_releaseMemory">MeshLoader_Job_releaseMemory</a> before this call. </li>
+                </ul>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_setMeshIndexData-jobContext-parameter</small> <br/>
+                        <code>jobContext</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle
+                        received from the current <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a> call. </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                </ul>
+
             </div>
 
             <div>
 
                 <h2 id="userDefinedJobs-customJobGuidelines">7.4. Custom Job Implementation Guidelines</h2>
 
+                <p> In order to facilitate easy pause, resume and stop of jobs and to avoid unresponsive threads,
+                    job execution functions <strong>should</strong> be implemented to execute recurrently, either
+                    with a state machine or by other means. The Job Function
+                    has no method of receiving a stop/terminate request, and must wait for the stop of the call to treat those requests.
+                    Consequently, the function should not exceed a given period of execution time, depending on scenario. </p>
 
+                <p> If a recurrent function approach is not chosen, another approach would be defining a stop conditional variable and passing
+                    it in the <a href="#MeshLoader_CustomJobInfo">MeshLoader_CustomJobInfo</a><code>::pUserData</code> member, and acquiring it
+                    in the Job Main Function with <a href="#MeshLoader_Job_getUserData">MeshLoader_Job_getUserData</a>. </p>
+
+                <p> The Job Main Function should also account for specific allocate/free resource function/states to
+                    make it easy to treat error states and possible leaks in the case of stop/termination. </p>
+
+                <p> The user defined job <strong>must</strong> treat all operations with care, as in the case of in-thread runtime-errors, traps, segmentation faults and
+                    any other execution halting errors, memory freeing is not guaranteed. </p>
+
+                <p> To avoid memory issues, use the <a href="#userDefinedJobs-garbageCollection">Garbage Collection Allocation Functions</a>. These are not mandatory,
+                    such as not requiring any allocation, having the memory pre-allocated inside the
+                    <a href="#MeshLoader_CustomJobInfo">MeshLoader_CustomJobInfo</a><code>::pUserData</code>, or if thread is not error-prone and no terminate calls are to be done. </p>
+
+                <p> The standard implementation object loader functions are implemented using only the <a href="#userDefinedJobs-customJobAPIFunctions">Custom Job API Functions</a>
+                    and the <a href="#userDefinedJobs-garbageCollection">Garbage Collection Memory Allocators</a> for robustness, so these can be used as examples: </p>
+
+                <ul>
+                    <li> Wavefront .OBJ file loader, recurrent calls: <a href="https://github.com/LoghinVladDev/meshLoader/blob/master/src/implementation/workers/objWorker.c">objWorker.c</a>. </li>
+                </ul>
 
             </div>
 
