@@ -4,7 +4,8 @@ body{
 }
 
 aside {
-    flex: 1 0 15%;
+    flex: 1 0 20em;
+    overflow-y: auto;
 }
 
 #specificationBody {

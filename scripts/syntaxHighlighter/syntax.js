@@ -77,6 +77,9 @@ function applySyntaxHighlighting ( colorSet = darculaColorSet ) {
 
 function applySyntaxForCode ( codeString, language, colorSet ) {
 
+    codeString = codeString.replaceAll ( '&lt;', '<' )
+    codeString = codeString.replaceAll ( '&gt;', '>' )
+
     if ( language.toLowerCase() === "c" ) {
         return parse ( codeString, cTokenRules, colorSet )
     }

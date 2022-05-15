@@ -60,6 +60,21 @@
                     </li>
                 </ul>
 
+                <p> Headers provided by the API:
+                    <a id="fundamentals-headers"></a> </p>
+
+                <ul>
+                    <li> For standard API calls, use <code>include/meshLoader/meshLoader</code>. </li>
+                    <li> For only standard API types, use <code>include/meshLoader/publicTypes</code>. These are included in <code>include/meshLoader</code> </li>
+                    <li> For custom job interfaces, use <code>include/meshLoader/customJob</code>. </li>
+                    <li> For utility functions, use <code>include/meshLoader/utility</code>. </li>
+                </ul>
+
+                <p> Header usage example: </p>
+<pre lang="c">
+#include &lt;meshLoader/meshLoader&gt;
+</pre>
+
             </div>
 
             <div>
@@ -459,6 +474,8 @@ typedef enum {
 
     MeshLoader_StructureType_JobData                = 0x00001000U,
     MeshLoader_StructureType_CustomJobInfo          = 0x00001001U,
+
+    MeshLoader_StructureType_MeshData               = 0x0000000BU,
 } MeshLoader_StructureType;
 </pre>
 
@@ -623,7 +640,7 @@ void MeshLoader_destroyInstance (
                 Once created, it has to be started, and the result can be observed or fully acquired from it. The job type determines the
                 task that the Worker Thread will execute in order to load the requested file. </p>
 
-            <p> The job types can be expanded by defining a <a href="#customJobs">Custom Job</a>. </p>
+            <p> The job types can be expanded by creating <a href="#userDefinedJobs">User Defined Jobs</a>. </p>
 
             <p> Jobs are created using an instance, and are Child objects to the used Instance. The application <strong>must</strong>, as a result,
                 destroy all jobs created from an instance before destroying an instance. </p>
@@ -846,7 +863,7 @@ typedef struct {
                         <code>jobCount</code> <strong>must</strong> be greater than <code>0</code>.
                     </li>
                     <li> <small> MLUID-MeshLoader_JobsCreateInfo-pJobs-parameter </small> <br/>
-                        <code>pJobs</code> <strong>must</strong> be a valid pointer to an array of valid <code>jobCount</code> <a href="#MeshLoader_Job">MeshLoader_Job</a> handles.
+                        <code>pJobs</code> <strong>must</strong> be a valid pointer to an array of <code>jobCount</code> valid <a href="#MeshLoader_Job">MeshLoader_Job</a> handles.
                     </li>
                     <li> <small> MLUID-MeshLoader_JobsCreateInfo-pCreateJobInfos-parameter </small> <br/>
                         <code>pCreateJobInfos</code> <strong>must</strong> be a valid pointer to an array of valid <code>jobCount</code> <a href="#MeshLoader_CreateJobInfo">MeshLoader_CreateJobInfo</a> structures.
@@ -906,7 +923,7 @@ typedef struct {
                     </li>
                     <li> <small> MLUID-MeshLoader_CreateJobInfo-jobType-00005 </small> <br/>
                         If <code>jobType</code> is <code>MeshLoader_JobType_Custom</code>, the <code>pNext</code> pNext
-                        structure chain <strong>must</strong> not include
+                        structure chain <strong>must</strong> include a a <a href="#MeshLoader_CustomJobInfo">MeshLoader_CustomJobInfo</a> structure.
                     </li>
                 </ul>
 
@@ -930,7 +947,7 @@ typedef struct {
                         <code>inputPath</code> <strong>must</strong> be a valid pointer to a null-terminated UTF-8 string.
                     </li>
                     <li> <small>MLUID-MeshLoader_CreateJobInfo-priority-parameter </small> <br/>
-                        <code>priority</code> <strong>must</strong> be greater than 0.0f and less or equal than 1.0f.
+                        <code>priority</code> <strong>must</strong> be greater than or equal to 0.0f and less than or equal to 1.0f.
                     </li>
                 </ul>
 
@@ -954,7 +971,7 @@ typedef enum {
                     <li>
                         <code>MeshLoader_JobType_Custom</code> describes a job whose behaviour
                         is user-defined by the implementing application. A job described by this type
-                        <strong>must</strong> have its behaviour specified. See more in <a href="#customJobs">Custom Jobs</a>
+                        <strong>must</strong> have its behaviour specified. See more in <a href="#userDefinedJobs">User Defined Jobs</a>
                     </li>
                 </ul>
 
@@ -988,7 +1005,7 @@ typedef MeshLoader_Flags                MeshLoader_MeshLoadModeFlags;
 </pre>
 
                 <p> The specified load mode behavior will have a direct effect on what functions can be used
-                    to load mesh data, once the job is finished loading. More info can be found at <a href="#mesh-readingJobData">Reading Job Data</a>. </p>
+                    to load mesh data, once the job is finished loading. More info can be found at <a href="#meshes-readingMeshData">Reading Mesh Data</a>. </p>
 
             </div>
 
@@ -1085,7 +1102,7 @@ typedef struct {
                         <code>jobCount</code> <strong>must</strong> be greater than <code>0</code>.
                     </li>
                     <li> <small> MLUID-MeshLoader_JobsStartInfo-pJobs-parameter </small> <br/>
-                        <code>pJobs</code> <strong>must</strong> be a valid pointer to an array of <i>valid</i> <a href="#MeshLoader_Job">MeshLoader_Job</a> handles.
+                        <code>pJobs</code> <strong>must</strong> be a valid pointer to an array of <code>jobCount</code> <i>valid</i> <a href="#MeshLoader_Job">MeshLoader_Job</a> handles.
                     </li>
                     <li> <small> MLUID-MeshLoader_JobsStartInfo-pAllocationCallbacks-parameter </small> <br/>
                         If <code>pAllocationCallbacks</code> is not <code>NULL</code>, <code>pAllocationCallbacks</code> <strong>must</strong> be a valid pointer to a valid <a href="#MeshLoader_AllocationCallbacks">MeshLoader_AllocationCallbacks</a> structure.
@@ -1195,7 +1212,7 @@ typedef struct {
                         <code>jobCount</code> <strong>must</strong> be greater than <code>0</code>.
                     </li>
                     <li> <small> MLUID-MeshLoader_JobsQueryInfo-pQueryJobInfos-parameter </small> <br/>
-                        <code>pQueryJobInfos</code> <strong>must</strong> be a <i>valid</i> pointer to an array of <i>valid</i> <a href="#MeshLoader_QueryJobInfo">MeshLoader_QueryJobInfo</a> structures.
+                        <code>pQueryJobInfos</code> <strong>must</strong> be a <i>valid</i> pointer to an array of <code>jobCount</code> <i>valid</i> <a href="#MeshLoader_QueryJobInfo">MeshLoader_QueryJobInfo</a> structures.
                     </li>
                 </ul>
 
@@ -1353,9 +1370,535 @@ void MeshLoader_destroyJobs (
                         <code>jobCount</code> <strong>must</strong> be greater than <code>0</code>.
                     </li>
                     <li> <small> MLUID-MeshLoader_destroyJobs-pJobs-parameter </small> <br/>
-                        <code>jobCount</code> <strong>must</strong> be a <i>valid</i> pointer to an array of <i>valid</i> <a href="#MeshLoader_Job">MeshLoader_Job</a> handles.
+                        <code>jobCount</code> <strong>must</strong> be a <i>valid</i> pointer to an array of <code>jobCount</code> <i>valid</i> <a href="#MeshLoader_Job">MeshLoader_Job</a> handles.
                     </li>
                     <li> <small> MLUID-MeshLoader_createJobs-pAllocationCallbacks-parameter </small> <br/>
+                        If <code>pAllocationCallbacks</code> is not <code>NULL</code>, <code>pAllocationCallbacks</code> <strong>must</strong> be a valid pointer
+                        to a valid <a href="#MeshLoader_AllocationCallbacks">MeshLoader_AllocationCallbacks</a> structure.
+                    </li>
+                </ul>
+
+            </div>
+
+        </div>
+
+        <div>
+
+            <h1 id="meshes">5. Meshes</h1>
+
+            <p> The end purpose of the Job Objects described in the previous chapter, and consequently, this library, is
+                to load mesh objects. These are representations of 3D models, and come in several formats. These usually
+                describe and object using <strong>vertices</strong> and <strong>faces</strong>. While this is the minimum
+                required data for a model representation, some formats include additional specialized data, such as
+                <strong>normal vectors</strong>, <strong>texture data</strong> or <strong>bump maps</strong>. </p>
+
+            <p> Any data format or specialized data structure that is not available in the implementation can be defined
+                through <a href="#userDefinedJobs">User Defined Jobs</a> and the interfaces provided for them. </p>
+
+            <p> A <a href="#MeshLoader_Job">MeshLoader_Job</a> object will create and populate a Mesh object during its lifetime,
+                and will make it readable or release it to the main process after it has finished processing. It is up to the
+                application whether the Mesh object is only read from the job or taken from it. </p>
+
+            <p> A Mesh Object is represented by <code>MeshLoader_Mesh</code> handles:
+                <a id="MeshLoader_Mesh"></a> </p>
+
+<pre lang="c">
+MESH_LOADER_DEFINE_HANDLE ( MeshLoader_Mesh )
+</pre>
+
+            <div>
+
+                <h2 id="meshes-ownership">5.1. Mesh Ownership</h2>
+
+                <p> Mesh Objects that are only read from Jobs <strong>must</strong> not be destroyed by the application. These
+                    will be freed upon the job's destruction or upon its restart. These are referred to as <strong>job-owned</strong>. </p>
+                <p> Mesh Objects that are taken from Jobs <strong>must</strong> be destroyed. After a Mesh Object is taken from
+                    a job successfully, subsequent attempts to read/take a Mesh Object from that Job will not yield another object,
+                    unless the job goes through another load-cycle (restart->finish). These are referred to as <strong>application-owned</strong>. </p>
+
+            </div>
+
+            <div>
+
+                <h2 id="meshes-meshAcquisition">5.2. Mesh Acquisition</h2>
+
+                <p> To acquire a mesh and without releasing it from the job, leaving the implementation to destroy it, call:
+                    <a id="MeshLoader_getMesh"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_getMesh (
+        MeshLoader_Job                          job,
+        MeshLoader_Mesh                       * pMesh
+);
+</pre>
+
+                <ul>
+                    <li> <code>job</code> is a <a href="#MeshLoader_Job">MeshLoader_Job</a> handle previously created with
+                        <a href="#MeshLoader_createJobs">MeshLoader_createJobs</a>. </li>
+                    <li> <code>pMesh</code> is a pointer to a <a href="#MeshLoader_Mesh">MeshLoader_Mesh</a> handle to store
+                        the resulting Mesh Object handle in upon successful completion. </li>
+                </ul>
+
+                <h3>Valid Usage</h3>
+
+                <ul>
+                    <li> <small>MLUID-MeshLoader_getMesh-job-00016</small> <br/>
+                        <code>job</code> <strong>should</strong> represent a Job Object whose state is <strong class="strong-state-description">Finished</strong>,
+                        as described in the <a href="#jobs-jobLifetimeAndExecution">Job Lifetime and Execution</a> section. </li>
+                    <li> <small>MLUID-MeshLoader_getMesh-job-00017</small> <br/>
+                        <code>job</code> <strong>must</strong> not have been given to a <code>MeshLoader_takeMesh</code> call as the <code>job</code>
+                        parameter before this call without having gone through another load-cycle(start->finish). </li>
+                    <li> <small>MLUID-MeshLoader_getMesh-pMesh-00023</small> <br/>
+                        The <a href="#MeshLoader_Mesh">MeshLoader_Mesh</a> handle located at <code>pMesh</code> <strong>must</strong> not be a <i>valid</i>, <a href="#meshes-ownership">application-owned</a> handle.</li>
+                </ul>
+
+                <h3>Valid Usage (Implicit)</h3>
+
+                <ul>
+                    <li> <small>MLUID-MeshLoader_getMesh-job-parameter</small> <br/>
+                        <code>job</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Job">MeshLoader_Job</a> handle. </li>
+                    <li> <small>MLUID-MeshLoader_getMesh-pMesh-parameter</small> <br/>
+                        <code>pMesh</code> <strong>must</strong> be a <i>valid</i> pointer to a <a href="#MeshLoader_Mesh">MeshLoader_Mesh</a> handle. </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                    <li> <code>MeshLoader_Result_JobNotStarted</code> </li>
+                    <li> <code>MeshLoader_Result_NotReady</code> </li>
+                </ul>
+                <a href="#errorCodes">Failure</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_JobExecutionFailed</code> </li>
+                </ul>
+
+                <p> The mesh obtained in <code>pMesh</code> from a successful call will be a <a href="#meshes-ownership">job-owned</a> mesh. </p>
+
+                <p> To take a mesh by releasing it from the job, requiring the acquired mesh to be destroyed by the application, call:
+                    <a id="MeshLoader_takeMesh"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_takeMesh (
+        MeshLoader_Job                          job,
+        MeshLoader_AllocationCallbacks  const * pAllocationCallbacks,
+        MeshLoader_Mesh                       * pMesh
+);
+</pre>
+
+                <ul>
+                    <li> <code>job</code> is a <a href="#MeshLoader_Job">MeshLoader_Job</a> handle previously created with
+                        <a href="#MeshLoader_createJobs">MeshLoader_createJobs</a>. </li>
+                    <li> <code>pAllocationCallbacks</code> controls memory allocation as described in the <a href="#memoryAllocation">Memory Allocation</a> chapter. </li>
+                    <li> <code>pMesh</code> is a pointer to a <a href="#MeshLoader_Mesh">MeshLoader_Mesh</a> handle to store
+                        the resulting Mesh Object handle in upon successful completion. </li>
+                </ul>
+
+                <h3>Valid Usage</h3>
+
+                <ul>
+                    <li> <small>MLUID-MeshLoader_takeMesh-job-00018</small> <br/>
+                        <code>job</code> <strong>should</strong> represent a Job Object whose state is <strong class="strong-state-description">Finished</strong>,
+                        as described in the <a href="#jobs-jobLifetimeAndExecution">Job Lifetime and Execution</a> section. </li>
+                    <li> <small>MLUID-MeshLoader_takeMesh-job-00019</small> <br/>
+                        <code>job</code> <strong>must</strong> not have been given to a <code>MeshLoader_takeMesh</code> call as the <code>job</code>
+                        parameter before this call without having gone through another load-cycle(start->finish). </li>
+                    <li> <small>MLUID-MeshLoader_takeMesh-pAllocationCallbacks-00020</small> <br/>
+                        If the <a href="#MeshLoader_JobsStartInfo">MeshLoader_JobsStartInfo</a> passed to the <a href="#MeshLoader_startJobs">MeshLoader_startJobs</a>
+                        call that created the <code>job</code> was given a valid, not <code>NULL</code> <a href="#MeshLoader_AllocationCallbacks">MeshLoader_AllocationCallbacks</a>,
+                        <code>pAllocationCallbacks</code> given here <strong>should</strong> point to the same structure. The application does take into account the possibility
+                        of another structure being given here, which will re-allocate all mesh data with these callbacks, and free them from the one stored at start. </li>
+                    <li> <small>MLUID-MeshLoader_takeMesh-pAllocationCallbacks-00021</small> <br/>
+                        If the <a href="#MeshLoader_JobsStartInfo">MeshLoader_JobsStartInfo</a> passed to the <a href="#MeshLoader_startJobs">MeshLoader_startJobs</a>
+                        call that created the <code>job</code> was <code>NULL</code>,
+                        <code>pAllocationCallbacks</code> given here <strong>should</strong> also be <code>NULL</code>. The application does take into account the possibility
+                        of these not being <code>NULL</code>, in which case the library will use internal allocations to free the original mesh data, or reallocate the new mesh data,
+                        depending on which of the allocator values was <code>NULL</code>. </li>
+                    <li> <small>MLUID-MeshLoader_takeMesh-pMesh-00022</small> <br/>
+                        The <a href="#MeshLoader_Mesh">MeshLoader_Mesh</a> handle located at <code>pMesh</code> <strong>must</strong> not be a <i>valid</i>, <a href="#meshes-ownership">application-owned</a> handle.</li>
+                </ul>
+
+                <h3>Valid Usage (Implicit)</h3>
+
+                <ul>
+                    <li> <small>MLUID-MeshLoader_takeMesh-job-parameter</small> <br/>
+                        <code>job</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Job">MeshLoader_Job</a> handle. </li>
+                    <li> <small> MLUID-MeshLoader_createJobs-pAllocationCallbacks-parameter </small> <br/>
+                        If <code>pAllocationCallbacks</code> is not <code>NULL</code>, <code>pAllocationCallbacks</code> <strong>must</strong> be a valid pointer
+                        to a valid <a href="#MeshLoader_AllocationCallbacks">MeshLoader_AllocationCallbacks</a> structure.
+                    </li>
+                    <li> <small>MLUID-MeshLoader_takeMesh-pMesh-parameter</small> <br/>
+                        <code>pMesh</code> <strong>must</strong> be a <i>valid</i> pointer to a <a href="#MeshLoader_Mesh">MeshLoader_Mesh</a> handle. </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                    <li> <code>MeshLoader_Result_JobNotStarted</code> </li>
+                    <li> <code>MeshLoader_Result_NotReady</code> </li>
+                </ul>
+                <a href="#errorCodes">Failure</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_JobExecutionFailed</code> </li>
+                </ul>
+
+                <p> The mesh obtained in <code>pMesh</code> from a successful call will be an <a href="#meshes-ownership">application-owned</a> mesh. </p>
+
+            </div>
+
+            <div>
+
+                <h2 id="meshes-readingMeshData">5.3. Reading Mesh Data</h2>
+
+                <p> The mesh contained data can be acquired in a read-only format, in a structure, or by enumeration of individual formats, by copy. </p>
+                <p> The data contained in the mesh depends on the <a href="#MeshLoader_MeshLoadModeFlags">MeshLoader_MeshLoadModeFlags</a> specified
+                    to the <a href="#MeshLoader_CreateJobInfo">MeshLoader_CreateJobInfo</a> in the <a href="#MeshLoader_JobsCreateInfo">MeshLoader_JobsCreateInfo</a> given
+                    to the <a href="#MeshLoader_createJobs">MeshLoader_createJobs</a> call that created the <a href="#MeshLoader_Job">MeshLoader_Job</a> that loaded the Mesh. </p>
+
+                <p> Each flag adds to the behavior, does not block another load behavior unless explicitly specified, and behave as described: </p>
+                <ul>
+                    <li> If <code>MeshLoader_MeshLoadModeFlag_LoadFaces</code> was used, the Mesh will have <strong>face data</strong> loaded. </li>
+                    <li> If <code>MeshLoader_MeshLoadModeFlag_LoadIndices</code> was used, the Mesh will have <strong>face data</strong> loaded, formatted as one array of indices. </li>
+                </ul>
+
+                <p> To read the mesh data in a read-only format, call:
+                    <a id="MeshLoader_getMeshData"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_getMeshData (
+        MeshLoader_Mesh                         mesh,
+        MeshLoader_MeshData                   * pMeshData
+);
+</pre>
+                <ul>
+                    <li> <code>mesh</code> is a <a href="#MeshLoader_Mesh">MeshLoader_Mesh</a> handle previously read/acquired from a <a href="#MeshLoader_Job">MeshLoader_Job</a>
+                        with either the <a href="#MeshLoader_getMesh">MeshLoader_getMesh</a> call or the <a href="#MeshLoader_takeMesh">MeshLoader_takeMesh</a> call. </li>
+                    <li> <code>pMeshData</code> is a pointer to a <a href="#MeshLoader_MeshData">MeshLoader_MeshData</a> structure, where the read-only mesh-data will be
+                        stored after a successful call. </li>
+                </ul>
+
+                <h3>Valid Usage (Implicit)</h3>
+
+                <ul>
+                    <li> <small>MLUID-MeshLoader_getMeshData-mesh-parameter</small> <br/>
+                        <code>mesh</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Mesh">MeshLoader_Mesh</a> handle. </li>
+                    <li> <small> MLUID-MeshLoader_getMeshData-pMeshData-parameter </small> <br/>
+                        <code>pMeshData</code> <strong>must</strong> be a <i>valid</i> pointer to a <i>valid</i> <a href="#MeshLoader_MeshData">MeshLoader_MeshData</a> structure.
+                    </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                </ul>
+
+                <p> The <code>MeshLoader_MeshData</code> structure is defined as follows:
+                    <a id="MeshLoader_MeshData"></a> </p>
+
+<pre lang="c">
+typedef struct {
+    MeshLoader_StructureType        structureType;
+    void                          * pNext;
+    MeshLoader_uint32               vertexCount;
+    MeshLoader_VertexData   const * pVertices;
+    MeshLoader_uint32               faceCount;
+    MeshLoader_FaceData     const * pFaces;
+    MeshLoader_IndexData    const * pIndexData;
+} MeshLoader_MeshData;
+</pre>
+                <ul>
+                    <li> <code>structureType</code> is the type of the structure. </li>
+                    <li> <code>pNext</code> is <code>NULL</code> or a pointer to a structure extending this structure. </li>
+                    <li> <code>vertexCount</code> is an unsigned integer representing the number of vertices the mesh is composed of. </li>
+                    <li> <code>pVertices</code> is a pointer to an array of <a href="#MeshLoader_VertexData">MeshLoader_VertexData</a> structures, representing the
+                        vertices the mesh is composed of. </li>
+                    <li> <code>faceCount</code> is an unsigned integer representing the number of faces the mesh is composed of. </li>
+                    <li> <code>pFaces</code> is a pointer to an array of <a href="#MeshLoader_FaceData">MeshLoader_FaceData</a> structures, representing the
+                        faces the mesh is composed of. </li>
+                </ul>
+
+                <p> After a successful call of <code>MeshLoader_getMeshData</code>, the <a href="#MeshLoader_MeshData"></a> at <code>pMesh</code>
+                    will contain the following: </p>
+
+                <ul>
+                    <li> <code>vertexCount</code> will be set to the number of vertices the mesh is composed of. </li>
+                    <li> <code>pVertices</code> will be a pointer to an array of <code>vertexCount</code> <i>valid</i>
+                        <a href="#MeshLoader_VertexData">MeshLoader_VertexData</a> structures. </li>
+                    <li> If <code>MeshLoader_MeshLoadModeFlag_LoadFaces</code> was used, <code>faceCount</code> will be set to the
+                        number of faces the mesh is composed of. </li>
+                    <li> If <code>MeshLoader_MeshLoadModeFlag_LoadFaces</code> was used, <code>pFaces</code> will be a pointer to an
+                        array of <code>faceCount</code> <i>valid</i> <a href="#MeshLoader_FaceData">MeshLoader_FaceData</a> structures. </li>
+                    <li> If <code>MeshLoader_MeshLoadModeFlag_LoadFaces</code> was not used, <code>faceCount</code> will be <code>0</code>. </li>
+                    <li> If <code>MeshLoader_MeshLoadModeFlag_LoadFaces</code> was not used, <code>pFaces</code> will be <code>NULL</code>. </li>
+                    <li> If <code>MeshLoader_MeshLoadModeFlag_LoadIndices</code> was used, <code>pIndexData</code> will be a pointer to a
+                        <i>valid</i> <a href="#MeshLoader_IndexData">MeshLoader_IndexData</a> structure. </li>
+                    <li> If <code>MeshLoader_MeshLoadModeFlag_LoadIndices</code> was not used, <code>pIndexData</code> will be <code>NULL</code>.
+                </ul>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_MeshData-structureType</small> <br/>
+                        <code>structureType</code> <strong>must</strong> be <code>MeshLoader_StructureType_MeshData</code>. </li>
+                    <li> <small>MLUID-MeshLoader_MeshData-pNext</small> <br/>
+                        <code>pNext</code> <strong>must</strong> be <code>NULL</code>. </li>
+                </ul>
+
+                <p> The <code>MeshLoader_VertexData</code> structure is described as follows:
+                    <a id="MeshLoader_VertexData"></a> </p>
+
+<pre lang="c">
+typedef struct {
+    double x;
+    double y;
+    double z;
+} MeshLoader_VertexData;
+</pre>
+                <ul>
+                    <li> <code>x</code> represents the first coordinate of the vertex, used to represent it in 3D space. </li>
+                    <li> <code>y</code> represents the second coordinate of the vertex, used to represent it in 3D space. </li>
+                    <li> <code>z</code> represents the third coordinate of the vertex, used to represent it in 3D space. </li>
+                </ul>
+
+                <p> The <code>MeshLoader_FaceData</code> structure is described as follows:
+                    <a id="MeshLoader_FaceData"></a> </p>
+
+<pre lang="c">
+typedef struct {
+    MeshLoader_uint32 u;
+    MeshLoader_uint32 v;
+    MeshLoader_uint32 w;
+} MeshLoader_FaceData;
+</pre>
+                <ul>
+                    <li> <code>u</code> represents the first index of the face, to start drawing from. </li>
+                    <li> <code>v</code> represents the second index of the face, to start drawing from. </li>
+                    <li> <code>w</code> represents the third index of the face, to start drawing from. </li>
+                </ul>
+
+                <p> The <code>MeshLoader_IndexData</code> structure is described as follows:
+                    <a id="MeshLoader_IndexData"></a> </p>
+
+<pre lang="c">
+typedef struct {
+    MeshLoader_uint32           indexCount;
+    MeshLoader_uint32   const * pIndices;
+} MeshLoader_IndexData;
+</pre>
+                <ul>
+                    <li> <code>indexCount</code> is the number of vertex drawing indices in the mesh. </li>
+                    <li> <code>pIndices</code> is a pointer to an array of vertex drawing indices. </li>
+                </ul>
+
+                <p> After a successful call of <code>MeshLoader_getMeshData</code> with <code>MeshLoader_MeshLoadModeFlag_LoadIndices</code>,
+                    the <a href="#MeshLoader_MeshData"></a>'s <code>pIndexData</code>
+                    will contain the following: </p>
+
+                <ul>
+                    <li> <code>indexCount</code> will be the number of vertex drawing indices, equivalent to 3 * faceCount. </li>
+                    <li> <code>pIndices</code> will be a <i>valid</i> pointer to an array of <code>indexCount</code> indices. </li>
+                </ul>
+
+                <p> To enumerate the vertices of a mesh, call:
+                    <a id="MeshLoader_enumerateMeshVertices"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_enumerateMeshVertices (
+        MeshLoader_Mesh                         mesh,
+        MeshLoader_uint32                     * pVertexCount,
+        MeshLoader_VertexData                 * pVertices
+);
+</pre>
+                <ul>
+                    <li> <code>mesh</code> is a <a href="#MeshLoader_Mesh">MeshLoader_Mesh</a> handle previously read/acquired from a
+                        <a href="#MeshLoader_Job">MeshLoader_Job</a> with either the <a href="#MeshLoader_getMesh">MeshLoader_getMesh</a> call or
+                        the <a href="#MeshLoader_takeMesh">MeshLoader_takeMesh</a> call. </li>
+                    <li> <code>pVertexCount</code> is a pointer to an unsigned integer related to the number of vertices queried, as described below. </li>
+                    <li> <code>pVertices</code> is either <code>NULL</code> or a pointer to an array of <a href="#MeshLoader_VertexData">MeshLoader_VertexData</a> structures. </li>
+                </ul>
+
+                <p> If <code>pVertices</code> is <code>NULL</code>, then the number of vertices available is returned in <code>pVertexCount</code>.
+                    Otherwise, <code>pVertexCount</code> <strong>must</strong> point to a variable set by the user to the number of elements in the
+                    <code>pVertices</code> array, and on return the variable is overwritten with the number of structures actually written to
+                    <code>pVertices</code>. If <code>pVertexCount</code> is less than the number of vertices, at most <code>pVertexCount</code>
+                    structures will be written, and <code>MeshLoader_Result_TooSmall</code> will be returned instead of
+                    <code>MeshLoader_Result_Success</code>, to indicate that not all the available vertices were returned. </p>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_enumerateMeshVertices-mesh-parameter</small> <br/>
+                        <code>mesh</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Mesh">MeshLoader_Mesh</a> handle.</li>
+                    <li> <small>MLUID-MeshLoader_enumerateMeshVertices-mesh-pVertexCount</small> <br/>
+                        <code>pVertexCount</code> <strong>must</strong> be a <i>valid</i> pointer to a <a href="#int">MeshLoader_uint32</a> value. </li>
+                    <li> <small>MLUID-MeshLoader_enumerateMeshVertices-mesh-pVertices</small> <br/>
+                        If the value referenced by <code>pVertexCount</code> is not <code>0</code>, and <code>pVertices</code> is not <code>NULL</code>,
+                        <code>pVertices</code> <strong>must</strong> be a <i>valid</i> pointer to an array of <code>pVertexCount</code> <i>valid</i>
+                        <a href="#MeshLoader_VertexData">MeshLoader_VertexData</a> structures. </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                    <li> <code>MeshLoader_Result_TooSmall</code> </li>
+                </ul>
+                <a href="#errorCodes">Failure</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_ResourceNotFound</code> </li>
+                </ul>
+
+                <p> If loaded with <code>MeshLoader_MeshLoadModeFlag_LoadFaces</code>, the faces of a mesh can be enumerated by calling:
+                    <a id="MeshLoader_enumerateMeshFaces"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_enumerateMeshFaces (
+        MeshLoader_Mesh                         mesh,
+        MeshLoader_uint32                     * pFaceCount,
+        MeshLoader_FaceData                   * pFaces
+);
+</pre>
+                <ul>
+                    <li> <code>mesh</code> is a <a href="#MeshLoader_Mesh">MeshLoader_Mesh</a> handle previously read/acquired from a
+                        <a href="#MeshLoader_Job">MeshLoader_Job</a> with either the <a href="#MeshLoader_getMesh">MeshLoader_getMesh</a> call or
+                        the <a href="#MeshLoader_takeMesh">MeshLoader_takeMesh</a> call. </li>
+                    <li> <code>pFaceCount</code> is a pointer to an unsigned integer related to the number of faces queried, as described below. </li>
+                    <li> <code>pFaces</code> is either <code>NULL</code> or a pointer to an array of <a href="#MeshLoader_FaceData">MeshLoader_FaceData</a> structures. </li>
+                </ul>
+
+                <p> If <code>pFaces</code> is <code>NULL</code>, then the number of faces available is returned in <code>pFaceCount</code>.
+                    Otherwise, <code>pFaceCount</code> <strong>must</strong> point to a variable set by the user to the number of elements in the
+                    <code>pFaces</code> array, and on return the variable is overwritten with the number of structures actually written to
+                    <code>pFaces</code>. If <code>pFaceCount</code> is less than the number of faces, at most <code>pFaceCount</code>
+                    structures will be written, and <code>MeshLoader_Result_TooSmall</code> will be returned instead of
+                    <code>MeshLoader_Result_Success</code>, to indicate that not all the available faces were returned. </p>
+
+                <h3>Valid Usage</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_enumerateMeshFaces-loadMode-00027</small> <br/>
+                        <code>mesh</code> <strong>must</strong> be a <a href="#MeshLoader_Mesh">MeshLoader_Mesh</a> handle obtained from a job that
+                        was created and loaded with <code>MeshLoader_MeshLoadModeFlag_LoadFaces</code>. </li>
+                </ul>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_enumerateMeshFaces-mesh-parameter</small> <br/>
+                        <code>mesh</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Mesh">MeshLoader_Mesh</a> handle.</li>
+                    <li> <small>MLUID-MeshLoader_enumerateMeshFaces-mesh-pFaceCount</small> <br/>
+                        <code>pFaceCount</code> <strong>must</strong> be a <i>valid</i> pointer to a <a href="#int">MeshLoader_uint32</a> value. </li>
+                    <li> <small>MLUID-MeshLoader_enumerateMeshFaces-mesh-pFaces</small> <br/>
+                        If the value referenced by <code>pFaceCount</code> is not <code>0</code>, and <code>pFaces</code> is not <code>NULL</code>,
+                        <code>pFaces</code> <strong>must</strong> be a <i>valid</i> pointer to an array of <code>pFaceCount</code> <i>valid</i>
+                        <a href="#MeshLoader_FaceData">MeshLoader_FaceData</a> structures. </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                    <li> <code>MeshLoader_Result_TooSmall</code> </li>
+                </ul>
+                <a href="#errorCodes">Failure</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_ResourceNotFound</code> </li>
+                </ul>
+
+                <p> If loaded with <code>MeshLoader_MeshLoadModeFlag_LoadIndices</code>, the faces of a mesh can be enumerated by calling:
+                    <a id="MeshLoader_enumerateIndices"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_enumerateIndices (
+        MeshLoader_Mesh                         mesh,
+        MeshLoader_uint32                     * pIndexCount,
+        MeshLoader_uint32                     * pIndices
+);
+</pre>
+                <ul>
+                    <li> <code>mesh</code> is a <a href="#MeshLoader_Mesh">MeshLoader_Mesh</a> handle previously read/acquired from a
+                        <a href="#MeshLoader_Job">MeshLoader_Job</a> with either the <a href="#MeshLoader_getMesh">MeshLoader_getMesh</a> call or
+                        the <a href="#MeshLoader_takeMesh">MeshLoader_takeMesh</a> call. </li>
+                    <li> <code>pIndexCount</code> is a pointer to an unsigned integer related to the number of index queried, as described below. </li>
+                    <li> <code>pIndices</code> is either <code>NULL</code> or a pointer to an array of <a href="#int">MeshLoader_uint32</a> values. </li>
+                </ul>
+
+                <p> If <code>pIndices</code> is <code>NULL</code>, then the number of indices available is returned in <code>pIndexCount</code>.
+                    Otherwise, <code>pIndexCount</code> <strong>must</strong> point to a variable set by the user to the number of elements in the
+                    <code>pIndices</code> array, and on return the variable is overwritten with the number of values actually written to
+                    <code>pIndices</code>. If <code>pIndexCount</code> is less than the number of indices, at most <code>pIndices</code>
+                    values will be written, and <code>MeshLoader_Result_TooSmall</code> will be returned instead of
+                    <code>MeshLoader_Result_Success</code>, to indicate that not all the available indices were returned. </p>
+
+                <h3>Valid Usage</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_enumerateIndices-loadMode-00028</small> <br/>
+                        <code>mesh</code> <strong>must</strong> be a <a href="#MeshLoader_Mesh">MeshLoader_Mesh</a> handle obtained from a job that
+                        was created and loaded with <code>MeshLoader_MeshLoadModeFlag_LoadIndices</code>. </li>
+                </ul>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_enumerateIndices-mesh-parameter</small> <br/>
+                        <code>mesh</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Mesh">MeshLoader_Mesh</a> handle.</li>
+                    <li> <small>MLUID-MeshLoader_enumerateIndices-mesh-pIndexCount</small> <br/>
+                        <code>pIndexCount</code> <strong>must</strong> be a <i>valid</i> pointer to a <a href="#int">MeshLoader_uint32</a> value. </li>
+                    <li> <small>MLUID-MeshLoader_enumerateIndices-mesh-pIndices</small> <br/>
+                        If the value referenced by <code>pIndexCount</code> is not <code>0</code>, and <code>pIndices</code> is not <code>NULL</code>,
+                        <code>pIndices</code> <strong>must</strong> be a <i>valid</i> pointer to an array of <code>pIndexCount</code> <i>valid</i>
+                        <a href="#int">MeshLoader_uint32</a> values. </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                    <li> <code>MeshLoader_Result_TooSmall</code> </li>
+                </ul>
+                <a href="#errorCodes">Failure</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_ResourceNotFound</code> </li>
+                </ul>
+
+            </div>
+
+            <div>
+
+                <h2 id="meshes-meshDestruction">5.4. Mesh Destruction</h2>
+
+                <p> To destroy an <a href="#meshes-ownership">application-owned</a> mesh, call:
+                    <a id="MeshLoader_destroyMesh"></a> </p>
+
+<pre lang="c">
+void MeshLoader_destroyMesh (
+        MeshLoader_Mesh                         mesh,
+        MeshLoader_AllocationCallbacks  const * pAllocationCallbacks
+);
+</pre>
+
+                <ul>
+                    <li> <code>mesh</code> is a <a href="#MeshLoader_Mesh">MeshLoader_Mesh</a> handle previously acquired from a <a href="#MeshLoader_Job">MeshLoader_Job</a>
+                        with a <a href="#MeshLoader_takeMesh">MeshLoader_takeMesh</a> call. </li>
+                    <li> <code>pAllocationCallbacks</code> controls memory allocation as described in the <a href="#memoryAllocation">Memory Allocation</a> chapter. </li>
+                </ul>
+
+                <h3>Valid Usage</h3>
+
+                <ul>
+                    <li> <small>MLUID-MeshLoader_destroyMesh-mesh-00024</small> <br/>
+                        The <code>mesh</code> handle <strong>must</strong> be an <a href="#meshes-ownership">application-owned</a> handle.</li>
+                    <li> <small>MLUID-MeshLoader_destroyMesh-pAllocationCallbacks-00025</small> <br/>
+                        If <code>MeshLoader_AllocationCallbacks</code> were provided when the <code>mesh</code> was acquired using <code>MeshLoader_takeMesh</code>, a compatible
+                        set of callbacks <strong>must</strong> be provided as a parameter for this call. </li>
+                    <li> <small>MLUID-MeshLoader_destroyMesh-pAllocationCallbacks-00026</small> <br/>
+                        If no <code>MeshLoader_AllocationCallbacks</code> were provided when the <code>mesh</code> was acquired using <code>MeshLoader_takeMesh</code>,
+                        <code>pAllocationCallbacks</code> <strong>must</strong> be <code>NULL</code>. </li>
+                </ul>
+
+                <h3>Valid Usage (Implicit)</h3>
+
+                <ul>
+                    <li> <small>MLUID-MeshLoader_destroyMesh-mesh-parameter</small> <br/>
+                        <code>mesh</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Mesh">MeshLoader_Mesh</a> handle. </li>
+                    <li> <small> MLUID-MeshLoader_destroyMesh-pAllocationCallbacks-parameter </small> <br/>
                         If <code>pAllocationCallbacks</code> is not <code>NULL</code>, <code>pAllocationCallbacks</code> <strong>must</strong> be a valid pointer
                         to a valid <a href="#MeshLoader_AllocationCallbacks">MeshLoader_AllocationCallbacks</a> structure.
                     </li>
@@ -1430,6 +1973,15 @@ typedef struct {
                     is not <code>NULL</code>, all three <strong>must</strong> be <i>valid</i> pointers to <i>valid</i> <a href="#MeshLoader_InternalAllocationNotificationFunction">MeshLoader_InternalAllocationNotificationFunction</a>
                     user-defined functions.
                 </li>
+            </ul>
+
+            <h3>Valid Usage (Implicit)</h3>
+
+            <ul>
+                <li> <small>MLUID-MeshLoader_AllocationCallbacks-structureType</small> <br/>
+                    <code>structureType</code> <strong>must</strong> be <code>MeshLoader_StructureType_AllocationCallbacks</code>. </li>
+                <li> <small>MLUID-MeshLoader_AllocationCallbacks-pNext</small> <br/>
+                    <code>pNext</code> <strong>must</strong> be <code>NULL</code>. </li>
             </ul>
 
             <p> The type of <code>allocationFunction</code>, <code>MeshLoader_AllocationFunction</code> is:
@@ -1549,7 +2101,7 @@ typedef void ( * MeshLoader_InternalAllocationNotificationFunction ) (
             <ul>
                 <li> <code>pUserData</code> is the value specified for <a href="#MeshLoader_AllocationCallbacks">MeshLoader_AllocationCallbacks</a><code>::pUserData</code>
                     in the allocator specified by the application. </li>
-                <li> <code>pNotification</code> is a pointer to a <a href="MeshLoader_AllocationNotification">MeshLoader_AllocationNotification</a> structure,
+                <li> <code>pNotification</code> is a pointer to a <a href="#MeshLoader_AllocationNotification">MeshLoader_AllocationNotification</a> structure,
                     containing the data of the notification. </li>
             </ul>
 
@@ -1619,7 +2171,756 @@ typedef struct {
 
             <p> <code>pNotification</code> is, just like the function it is passed into (<code>MeshLoader_AllocationNotification</code>), purely information.
                 Consequently, the application <strong>must</strong> not apply any allocation or modification operations to the addresses received through the
-                <code>pMemory</code> or <code>pOldMemory</code> values.</p>
+                <code>pMemory</code> or <code>pOldMemory</code> values. </p>
+
+        </div>
+
+        <div>
+
+            <h1 id="userDefinedJobs">7. User Defined Jobs</h1>
+
+            <p> For object types/formats that are not available in the standard implementation, it can be extended with user-defined jobs.
+                These are created by specifying an extending structure to the <a href="#MeshLoader_CreateJobInfo">MeshLoader_CreateJobInfo</a>
+                structures in the <a href="#MeshLoader_JobsCreateInfo">MeshLoader_JobsCreateInfo</a> passed to the
+                <a href="#MeshLoader_createJobs">MeshLoader_createJobs</a> call. These jobs are referred to as <strong>Custom Jobs</strong>. </p>
+
+            <p> To access the Custom Job types and functions, include the "customJob" header </p>
+
+<pre lang="c">
+#include &lt;meshLoader/customJob&gt;
+</pre>
+
+            <div>
+
+                <h2 id="userDefinedJobs-customJobCreation"> 7.2. Custom Job Creation </h2>
+
+                <p> To create a custom job, add the <code>MeshLoader_CustomJobInfo</code> to the
+                    <a href="#MeshLoader_JobsCreateInfo">MeshLoader_JobsCreateInfo</a><code>::pNext</code> chain when
+                    <a href="#jobs-jobCreation">creating Job Objects</a>. The structure is defined as follows:
+                    <a id="MeshLoader_CustomJobInfo"></a> </p>
+
+<pre lang="c">
+typedef struct {
+    MeshLoader_StructureType            structureType;
+    void                        const * pNext;
+    void                              * pUserData;
+    MeshLoader_Job_MainFunction         jobFunction;
+} MeshLoader_CustomJobInfo;
+</pre>
+                <ul>
+                    <li> <code>structureType</code> is the type of the structure. </li>
+                    <li> <code>pNext</code> is NULL or a pointer to the structure extending this structure. </li>
+                    <li> <code>pUserData</code> is a value to be interpreted by the implementation of the custom job.
+                        When a worker thread will call the <code>jobFunction</code> to process a part of the job, the user
+                        can acquire this value with <code>MeshLoader_Job_getUserData</code>. </li>
+                    <li> <code>jobFunction</code> is a <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>
+                        pointer to an application-defined function that is called by the implementation every time a Worker Thread
+                        is assigned to process a part of the defined Job.</li>
+                </ul>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_CustomJobInfo-structureType</small> <br/>
+                        <code>structureType</code> <strong>must</strong> be <code>MeshLoader_StructureType_CustomJobInfo</code>. </li>
+                    <li> <small>MLUID-MeshLoader_CustomJobInfo-pNext</small> <br/>
+                        <code>pNext</code> <strong>must</strong> either be <code>NULL</code>, or a <i>valid</i> pointer to a
+                        <i>valid</i> structure that would be expected in the <code>pNext</code> chain of <a href="#MeshLoader_CreateJobInfo">MeshLoader_CreateJobInfo</a>. </li>
+                    <li> <small>MLUID-MeshLoader_CustomJobInfo-jobFunction</small> <br/>
+                        <code>jobFunction</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Job_MainFunction"></a> pointer to an application defined
+                        Job main function. </li>
+                </ul>
+
+                <p> The <code>MeshLoader_Job_MainFunction</code> is described as follows:
+                    <a id="MeshLoader_Job_MainFunction"></a> </p>
+
+<pre lang="c">
+typedef MeshLoader_Result ( * MeshLoader_Job_MainFunction ) (
+        MeshLoader_Job_Context  context
+);
+</pre>
+
+                <ul>
+                    <li> <code> context </code> is a <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> object handle, representing the
+                        data that is accessible from the function through API calls. </li>
+                </ul>
+
+                <h3>Valid Usage</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_MainFunction-return-00029</small> <br/>
+                        An application-defined function <code>MeshLoader_Job_MainFunction</code> <strong>must</strong>
+                        return <code>MeshLoader_Result_Success</code> when the function executed successfully. </li>
+                </ul>
+
+                <p> The <code>MeshLoader_Job_Context</code> is defined as follows:
+                    <a id="MeshLoader_Job_Context"></a> </p>
+
+<pre lang="c">
+MESH_LOADER_DEFINE_HANDLE ( MeshLoader_Job_Context )
+</pre>
+
+            </div>
+
+            <div>
+
+                <h2 id="userDefinedJobs-garbageCollection"> 7.2. Custom Job Garbage Collection </h2>
+
+                <p> Since all jobs are executed on multiple CPU threads, a call to a <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>
+                    is a call done from a separate thread to the main application thread, well-defined behaviour for Custom Jobs is hard to achieve. Added to this
+                    is the large size of object files and the long times required to load these files. To bypass one of the major problems of this, that is
+                    memory allocation, any large amount of data <strong>should</strong> be managed with the <code>MeshLoader_Job_*memory</code> functions.
+                    These ensure that in the case of errors or thread termination, the memory is safely freed. </p>
+
+                <p> To allocate memory from a <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>, call:
+                    <a id="MeshLoader_Job_allocateMemory"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_Job_allocateMemory (
+        MeshLoader_Job_Context      jobContext,
+        MeshLoader_size             size,
+        void                     ** ppMemory
+);
+</pre>
+                <ul>
+                    <li> <code>jobContext</code> is a <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle given as
+                        a parameter in the <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>. </li>
+                    <li> <code>size</code> is the size in bytes of the memory to allocate. </li>
+                    <li> <code>ppMemory</code> is a pointer to the pointer to store the allocated memory into </li>
+                </ul>
+
+                <p> If the memory allocation fails, ppMemory will contain the <code>NULL</code> value. </p>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_allocateMemory-jobContext-parameter</small> <br/>
+                        <code>jobContext</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle
+                        received from the current <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a> call. </li>
+                    <li> <small>MLUID-MeshLoader_Job_allocateMemory-size-parameter</small> <br/>
+                        <code>size</code> <strong>must</strong> be greater than <code>0</code>. </li>
+                    <li> <small>MLUID-MeshLoader_Job_allocateMemory-ppMemory-parameter</small> <br/>
+                        <code>ppMemory</code> <strong>must</strong> be a <i>valid</i> pointer to a <code>void *</code> value. </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                </ul>
+                <a href="#errorCodes">Failure</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_OutOfMemory</code> </li>
+                    <li> <code>MeshLoader_Result_MutexError</code> </li>
+                </ul>
+
+                <p> To allocate memory from a <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>, call:
+                    <a id="MeshLoader_Job_allocateMemory2"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_Job_allocateMemory2 (
+        MeshLoader_Job_Context      jobContext,
+        MeshLoader_size             size,
+        MeshLoader_size             alignment,
+        void                     ** ppMemory
+);
+</pre>
+                <ul>
+                    <li> <code>jobContext</code> is a <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle given as
+                        a parameter in the <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>. </li>
+                    <li> <code>size</code> is the size, in bytes, of the memory to allocate. </li>
+                    <li> <code>alignment</code> is the alignment, in bytes, of the memory to allocate. </li>
+                    <li> <code>ppMemory</code> is a pointer to the pointer to store the allocated memory into </li>
+                </ul>
+
+                <p> If the memory allocation fails, ppMemory will contain the <code>NULL</code> value. </p>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_allocateMemory2-jobContext-parameter</small> <br/>
+                        <code>jobContext</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle
+                        received from the current <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a> call. </li>
+                    <li> <small>MLUID-MeshLoader_Job_allocateMemory2-size-parameter</small> <br/>
+                        <code>size</code> <strong>must</strong> be greater than <code>0</code>. </li>
+                    <li> <small>MLUID-MeshLoader_Job_allocateMemory2-alignment-parameter</small> <br/>
+                        <code>alignment</code> <strong>must</strong> be a greater than <code>0</code> and <strong>must</strong> be a power of two. </li>
+                    <li> <small>MLUID-MeshLoader_Job_allocateMemory2-ppMemory-parameter</small> <br/>
+                        <code>ppMemory</code> <strong>must</strong> be a <i>valid</i> pointer to a <code>void *</code> value. </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                </ul>
+                <a href="#errorCodes">Failure</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_OutOfMemory</code> </li>
+                    <li> <code>MeshLoader_Result_MutexError</code> </li>
+                </ul>
+
+                <p> To reallocate memory from a <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>, call:
+                    <a id="MeshLoader_Job_reallocateMemory"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_Job_reallocateMemory (
+        MeshLoader_Job_Context      jobContext,
+        void                      * pOldMemory,
+        MeshLoader_size             size,
+        void                     ** ppMemory
+);
+</pre>
+                <ul>
+                    <li> <code>jobContext</code> is a <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle given as
+                        a parameter in the <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>. </li>
+                    <li> <code>pOldMemory</code> is a pointer to the old memory that is to be reallocated. </li>
+                    <li> <code>size</code> is the size in bytes of the memory to allocate. </li>
+                    <li> <code>ppMemory</code> is a pointer to the pointer to store the allocated memory into </li>
+                </ul>
+
+                <p> If the memory allocation fails, ppMemory will contain the <code>NULL</code> value. </p>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_reallocateMemory-jobContext-parameter</small> <br/>
+                        <code>jobContext</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle
+                        received from the current <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a> call. </li>
+                    <li> <small>MLUID-MeshLoader_Job_reallocateMemory-pOldMemory-parameter</small> <br/>
+                        <code>pOldMemory</code> <strong>must</strong> either be <code>NULL</code>, or a pointer to memory obtained from a previous
+                        <a href="#MeshLoader_Job_allocateMemory">MeshLoader_Job_allocateMemory</a>,
+                        <a href="#MeshLoader_Job_allocateMemory2">MeshLoader_Job_allocateMemory2</a>,
+                        <a href="#MeshLoader_Job_reallocateMemory">MeshLoader_Job_reallocateMemory</a> or
+                        <a href="#MeshLoader_Job_reallocateMemory2">MeshLoader_Job_reallocateMemory2</a> call. </li>
+                    <li> <small>MLUID-MeshLoader_Job_reallocateMemory-ppMemory-parameter</small> <br/>
+                        <code>ppMemory</code> <strong>must</strong> be a <i>valid</i> pointer to a <code>void *</code> value. </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                </ul>
+                <a href="#errorCodes">Failure</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_OutOfMemory</code> </li>
+                    <li> <code>MeshLoader_Result_MutexError</code> </li>
+                </ul>
+
+                <p> To reallocate memory from a <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>, call:
+                    <a id="MeshLoader_Job_reallocateMemory2"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_Job_reallocateMemory2 (
+        MeshLoader_Job_Context      jobContext,
+        void                      * pOldMemory,
+        MeshLoader_size             size,
+        MeshLoader_size             alignment,
+        void                     ** ppMemory
+);
+</pre>
+                <ul>
+                    <li> <code>jobContext</code> is a <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle given as
+                        a parameter in the <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>. </li>
+                    <li> <code>pOldMemory</code> is a pointer to the old memory that is to be reallocated. </li>
+                    <li> <code>size</code> is the size, in bytes, of the memory to allocate. </li>
+                    <li> <code>alignment</code> is the alignment, in bytes, of the memory to allocate. </li>
+                    <li> <code>ppMemory</code> is a pointer to the pointer to store the allocated memory into </li>
+                </ul>
+
+                <p> If the memory allocation fails, ppMemory will contain the <code>NULL</code> value. </p>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_reallocateMemory2-jobContext-parameter</small> <br/>
+                        <code>jobContext</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle
+                        received from the current <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a> call. </li>
+                    <li> <small>MLUID-MeshLoader_Job_reallocateMemory2-pOldMemory-parameter</small> <br/>
+                        <code>pOldMemory</code> <strong>must</strong> either be <code>NULL</code>, or a pointer to memory obtained from a previous
+                        <a href="#MeshLoader_Job_allocateMemory">MeshLoader_Job_allocateMemory</a>,
+                        <a href="#MeshLoader_Job_allocateMemory2">MeshLoader_Job_allocateMemory2</a>,
+                        <a href="#MeshLoader_Job_reallocateMemory">MeshLoader_Job_reallocateMemory</a> or
+                        <a href="#MeshLoader_Job_reallocateMemory2">MeshLoader_Job_reallocateMemory2</a> call. </li>
+                    <li> <small>MLUID-MeshLoader_Job_reallocateMemory2-alignment-parameter</small> <br/>
+                        <code>alignment</code> <strong>must</strong> be a greater than <code>0</code> and <strong>must</strong> be a power of two. </li>
+                    <li> <small>MLUID-MeshLoader_Job_reallocateMemory2-ppMemory-parameter</small> <br/>
+                        <code>ppMemory</code> <strong>must</strong> be a <i>valid</i> pointer to a <code>void *</code> value. </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                </ul>
+                <a href="#errorCodes">Failure</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_OutOfMemory</code> </li>
+                    <li> <code>MeshLoader_Result_MutexError</code> </li>
+                </ul>
+
+                <p> To free memory from a <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>, call:
+                    <a id="MeshLoader_Job_freeMemory"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_Job_freeMemory (
+        MeshLoader_Job_Context    jobContext,
+        void                    * pMemory
+);
+</pre>
+                <ul>
+                    <li> <code>jobContext</code> is a <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle given as
+                        a parameter in the <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>. </li>
+                    <li> <code>pMemory</code> is a pointer to the allocated memory to free. </li>
+                </ul>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_freeMemory-jobContext-parameter</small> <br/>
+                        <code>jobContext</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle
+                        received from the current <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a> call. </li>
+                    <li> <small>MLUID-MeshLoader_Job_freeMemory-pMemory-parameter</small> <br/>
+                        <code>pMemory</code> <strong>must</strong> either be <code>NULL</code> or a <i>valid</i> pointer obtained from a previous
+                        <a href="#MeshLoader_Job_allocateMemory">MeshLoader_Job_allocateMemory</a>,
+                        <a href="#MeshLoader_Job_allocateMemory2">MeshLoader_Job_allocateMemory2</a>,
+                        <a href="#MeshLoader_Job_reallocateMemory">MeshLoader_Job_reallocateMemory</a> or
+                        <a href="#MeshLoader_Job_reallocateMemory2">MeshLoader_Job_reallocateMemory2</a> call. </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                </ul>
+                <a href="#errorCodes">Failure</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_OutOfMemory</code> </li>
+                    <li> <code>MeshLoader_Result_MutexError</code> </li>
+                </ul>
+
+                <p> To release the memory tracking of a pointer allocated in a <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>, call:
+                    <a id="MeshLoader_Job_releaseMemory"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_Job_releaseMemory (
+        MeshLoader_Job_Context    jobContext,
+        void                    * pMemory
+);
+</pre>
+                <ul>
+                    <li> <code>jobContext</code> is a <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle given as
+                        a parameter in the <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>. </li>
+                    <li> <code>pMemory</code> is a pointer to the allocated memory to release from garbage collection tracking. </li>
+                </ul>
+
+                <p> This function is used to release memory from garbage collection tracking, making it possible to pass memory to objects
+                    that are to be used after the Job has finished, such as Mesh Data. </p>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_releaseMemory-jobContext-parameter</small> <br/>
+                        <code>jobContext</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle
+                        received from the current <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a> call. </li>
+                    <li> <small>MLUID-MeshLoader_Job_releaseMemory-pMemory-parameter</small> <br/>
+                        <code>pMemory</code> <strong>must</strong> be a <i>valid</i> pointer obtained from a previous
+                        <a href="#MeshLoader_Job_allocateMemory">MeshLoader_Job_allocateMemory</a>,
+                        <a href="#MeshLoader_Job_allocateMemory2">MeshLoader_Job_allocateMemory2</a>,
+                        <a href="#MeshLoader_Job_reallocateMemory">MeshLoader_Job_reallocateMemory</a> or
+                        <a href="#MeshLoader_Job_reallocateMemory2">MeshLoader_Job_reallocateMemory2</a> call. </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                </ul>
+                <a href="#errorCodes">Failure</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_OutOfMemory</code> </li>
+                    <li> <code>MeshLoader_Result_MutexError</code> </li>
+                </ul>
+
+            </div>
+
+            <div>
+
+                <h2 id="userDefinedJobs-customJobAPIFunctions">7.3. Custom Job API Functions</h2>
+
+                <p> To acquire the <code>pUserData</code> given to the <a href="#MeshLoader_CustomJobInfo">MeshLoader_CustomJobInfo</a>
+                    at job creation, call:
+                    <a id="MeshLoader_Job_getUserData"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_Job_getUserData (
+        MeshLoader_Job_Context    jobContext,
+        void                   ** ppUserData
+);
+</pre>
+
+                <ul>
+                    <li> <code>jobContext</code> is a <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle given as
+                        a parameter in the <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>. </li>
+                    <li> <code>ppUserData</code> is a pointer to a pointer to store the <a href="#MeshLoader_CustomJobInfo">MeshLoader_CustomJobInfo</a><code>::pUserData</code>
+                        value into upon a successful call.</li>
+                </ul>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_getUserData-jobContext-parameter</small> <br/>
+                        <code>jobContext</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle
+                        received from the current <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a> call. </li>
+                    <li> <small>MLUID-MeshLoader_Job_getUserData-ppUserData-parameter</small> <br/>
+                        <code>ppUserData</code> <strong>must</strong> be a <i>valid</i> pointer to a <code>void *</code> value. </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                </ul>
+
+                <p> To store data for the next call of <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>, call:
+                    <a id="MeshLoader_Job_setDataForNextCall"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_Job_setDataForNextCall (
+        MeshLoader_Job_Context    jobContext,
+        void                    * pData
+);
+</pre>
+
+                <ul>
+                    <li> <code>jobContext</code> is a <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle given as
+                        a parameter in the <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>. </li>
+                    <li> <code>pData</code> is a pointer to the data to store for the next call. </li>
+                </ul>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_setDataForNextCall-jobContext-parameter</small> <br/>
+                        <code>jobContext</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle
+                        received from the current <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a> call. </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                </ul>
+
+                <p> To acquire the data stored by the previous call of <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>, call:
+                    <a id="MeshLoader_Job_getDataFromPreviousCall"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_Job_getDataFromPreviousCall (
+        MeshLoader_Job_Context    jobContext,
+        void                   ** ppData
+);
+</pre>
+
+                <ul>
+                    <li> <code>jobContext</code> is a <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle given as
+                        a parameter in the <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>. </li>
+                    <li> <code>ppData</code> is a pointer to a pointer to acquire the data from the previous call into, after a successful call.</li>
+                </ul>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_getDataFromPreviousCall-jobContext-parameter</small> <br/>
+                        <code>jobContext</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle
+                        received from the current <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a> call. </li>
+                    <li> <small>MLUID-MeshLoader_Job_getDataFromPreviousCall-ppData-parameter</small> <br/>
+                        <code>ppData</code> <strong>must</strong> be a <i>valid</i> pointer to a <code>void *</code> value. </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                </ul>
+
+                <p> To get the progress of the job, call:
+                    <a id="MeshLoader_Job_getProgress"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_Job_getProgress (
+        MeshLoader_Job_Context  jobContext,
+        float                 * pProgress
+);
+</pre>
+
+                <ul>
+                    <li> <code>jobContext</code> is a <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle given as
+                        a parameter in the <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>. </li>
+                    <li> <code>pProgress</code> is a pointer to a float to load the progress into after a successful call. The progress is a value between
+                        <code>0.0f</code> and <code>1.0f</code>, <code>0.0f</code> representing a job that is 0% done, and <code>1.0f</code>
+                        representing a job that is 100% done. As an example, a progress of <code>0.25f</code> represents a job progress of 25%. </li>
+                </ul>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_getProgress-jobContext-parameter</small> <br/>
+                        <code>jobContext</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle
+                        received from the current <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a> call. </li>
+                    <li> <small>MLUID-MeshLoader_Job_getProgress-pProgress-parameter</small> <br/>
+                        <code>pProgress</code> <strong>must</strong> be a <i>valid</i> pointer to a <a href="#float">float</a> value. </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                </ul>
+
+                <p> To set the progress of the job, call:
+                    <a id="MeshLoader_Job_setProgress"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_Job_setProgress (
+        MeshLoader_Job_Context  jobContext,
+        float                   progress
+);
+</pre>
+
+                <ul>
+                    <li> <code>jobContext</code> is a <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle given as
+                        a parameter in the <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>. </li>
+                    <li> <code>progress</code> is a <a href="#float">float</a> to store the progress from. The progress is a value between
+                        <code>0.0f</code> and <code>1.0f</code>, <code>0.0f</code> representing a job that is 0% done, and <code>1.0f</code>
+                        representing a job that is 100% done. As an example, a progress of <code>0.25f</code> represents a job progress of 25%. </li>
+                </ul>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_setProgress-jobContext-parameter</small> <br/>
+                        <code>jobContext</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle
+                        received from the current <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a> call. </li>
+                    <li> <small>MLUID-MeshLoader_Job_setProgress-progress-parameter</small> <br/>
+                        <code>parameter</code> <strong>must</strong> be greater than or equal to <code>0.0f</code> and
+                        less than or equal to <code>1.0f</code>. </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                </ul>
+
+                <p> To get the load mode of the job, call:
+                    <a id="MeshLoader_Job_getLoadMode"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_Job_getLoadMode (
+        MeshLoader_Job_Context          jobContext,
+        MeshLoader_MeshLoadModeFlags  * pLoadMode
+);
+</pre>
+
+                <ul>
+                    <li> <code>jobContext</code> is a <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle given as
+                        a parameter in the <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>. </li>
+                    <li> <code>pLoadMode</code> is a pointer to a <a href="#MeshLoader_MeshLoadModeFlags">MeshLoader_MeshLoadModeFlags</a> to load the load mode into.
+                        This will contain a bitmask of <a href="#MeshLoader_MeshLoadModeFlagBits">MeshLoader_MeshLoadModeFlagBits</a>, each specifying
+                        a specific format of data to load after a successful call.</li>
+                </ul>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_getLoadMode-jobContext-parameter</small> <br/>
+                        <code>jobContext</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle
+                        received from the current <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a> call. </li>
+                    <li> <small>MLUID-MeshLoader_Job_getLoadMode-pLoadMode-parameter</small> <br/>
+                        <code>pLoadMode</code> <strong>must</strong> be a <i>valid</i> pointer to a <a href="#MeshLoader_MeshLoadModeFlags">MeshLoader_MeshLoadModeFlags</a> value. </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                </ul>
+
+                <p> To get the input path of the job, call:
+                    <a id="MeshLoader_Job_getInputPath"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_Job_getInputPath (
+        MeshLoader_Job_Context        jobContext,
+        MeshLoader_StringLiteral    * pInputPath
+);
+</pre>
+
+                <ul>
+                    <li> <code>jobContext</code> is a <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle given as
+                        a parameter in the <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>. </li>
+                    <li> <code>pInputPath</code> is a pointer to a <a href="#string">MeshLoader_StringLiteral</a> to load the input path of the mesh file into.
+                        This will contain a null-terminated, UTF-8 formatted String after a successful call.</li>
+                </ul>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_getInputPath-jobContext-parameter</small> <br/>
+                        <code>jobContext</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle
+                        received from the current <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a> call. </li>
+                    <li> <small>MLUID-MeshLoader_Job_getInputPath-pInputPath-parameter</small> <br/>
+                        <code>pInputPath</code> <strong>must</strong> be a <i>valid</i> pointer to a <a href="#string">MeshLoader_StringLiteral</a> value. </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                </ul>
+
+                <p> To set the Mesh Vertex Data, call:
+                    <a id="MeshLoader_Job_setMeshVertexData"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_Job_setMeshVertexData (
+        MeshLoader_Job_Context          jobContext,
+        MeshLoader_uint32               vertexCount,
+        MeshLoader_VertexData   const * pVertices
+);
+</pre>
+
+                <ul>
+                    <li> <code>jobContext</code> is a <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle given as
+                        a parameter in the <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>. </li>
+                    <li> <code>vertexCount</code> is a integer specifying the number of vertices loaded by the Job. </li>
+                    <li> <code>pInputPath</code> is a pointer to an array of <a href="#MeshLoader_VertexData">MeshLoader_VertexData</a> structures containing
+                        the vertices of the mesh.</li>
+                </ul>
+
+                <h3>Valid Usage</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_setMeshVertexData-pointerLifetime-00030</small> <br/>
+                        The memory at the <code>pVertices</code> pointer <strong>must</strong> not be freed from the Job if the call was successful, if it was
+                        allocated dynamically in the Job.</li>
+                    <li> <small>MLUID-MeshLoader_Job_setMeshVertexData-garbageCollector-00031</small> <br/>
+                        If the memory at the <code>pVertices</code> pointer was allocated using <a href="#MeshLoader_Job_allocateMemory">MeshLoader_Job_allocateMemory</a>,
+                        <a href="#MeshLoader_Job_allocateMemory2">MeshLoader_Job_allocateMemory2</a>, <a href="#MeshLoader_Job_reallocateMemory">MeshLoader_Job_reallocateMemory</a> or
+                        <a href="#MeshLoader_Job_reallocateMemory2">MeshLoader_Job_reallocateMemory2</a>, it <strong>must</strong> not be freed and it <strong>must</strong>
+                        be released right before (ideal case) or right after to this call using <a href="#MeshLoader_Job_releaseMemory">MeshLoader_Job_releaseMemory</a>. </li>
+                </ul>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_setMeshVertexData-jobContext-parameter</small> <br/>
+                        <code>jobContext</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle
+                        received from the current <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a> call. </li>
+                    <li> <small>MLUID-MeshLoader_Job_setMeshVertexData-vertexCount-parameter</small> <br/>
+                        <code>vertexCount</code> <strong>must</strong> be greater than <code>0</code>. </li>
+                    <li> <small>MLUID-MeshLoader_Job_setMeshVertexData-pVertices-parameter</small> <br/>
+                        <code>pVertices</code> <strong>must</strong> be a <i>valid</i> pointer to an array of <code>vertexCount</code>
+                        valid <a href="#MeshLoader_VertexData">MeshLoader_VertexData</a> structures. </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                </ul>
+
+                <p> To set the Mesh Face Data, call:
+                    <a id="MeshLoader_Job_setMeshFaceData"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_Job_setMeshFaceData (
+        MeshLoader_Job_Context          jobContext,
+        MeshLoader_uint32               faceCount,
+        MeshLoader_FaceData     const * pFaces
+);
+</pre>
+
+                <ul>
+                    <li> <code>jobContext</code> is a <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle given as
+                        a parameter in the <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>. </li>
+                    <li> <code>faceCount</code> is a integer specifying the number of faces loaded by the Job. </li>
+                    <li> <code>pFaces</code> is a pointer to an array of <a href="#MeshLoader_FaceData">MeshLoader_FaceData</a> structures containing
+                        the faces of the mesh.</li>
+                </ul>
+
+                <h3>Valid Usage</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_setMeshFaceData-pointerLifetime-00032</small> <br/>
+                        The memory at the <code>pVertices</code> pointer <strong>must</strong> not be freed from the Job if the call was successful, if it was
+                        allocated dynamically in the Job.</li>
+                    <li> <small>MLUID-MeshLoader_Job_setMeshFaceData-garbageCollector-00033</small> <br/>
+                        If the memory at the <code>pFaces</code> pointer was allocated using <a href="#MeshLoader_Job_allocateMemory">MeshLoader_Job_allocateMemory</a>,
+                        <a href="#MeshLoader_Job_allocateMemory2">MeshLoader_Job_allocateMemory2</a>, <a href="#MeshLoader_Job_reallocateMemory">MeshLoader_Job_reallocateMemory</a> or
+                        <a href="#MeshLoader_Job_reallocateMemory2">MeshLoader_Job_reallocateMemory2</a>, it <strong>must</strong> not be freed and it <strong>must</strong>
+                        be released right before (ideal case) or right after to this call using <a href="#MeshLoader_Job_releaseMemory">MeshLoader_Job_releaseMemory</a>. </li>
+                </ul>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_setMeshFaceData-jobContext-parameter</small> <br/>
+                        <code>jobContext</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle
+                        received from the current <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a> call. </li>
+                    <li> <small>MLUID-MeshLoader_Job_setMeshFaceData-faceCount-parameter</small> <br/>
+                        <code>faceCount</code> <strong>must</strong> be greater than <code>0</code>. </li>
+                    <li> <small>MLUID-MeshLoader_Job_setMeshFaceData-pFaces-parameter</small> <br/>
+                        <code>pFaces</code> <strong>must</strong> be a <i>valid</i> pointer to an array of <code>faceCount</code>
+                        valid <a href="#MeshLoader_FaceData">MeshLoader_FaceData</a> structures. </li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                </ul>
+
+                <p> To set the Mesh Index Data, call:
+                    <a id="MeshLoader_Job_setMeshIndexData"></a> </p>
+
+<pre lang="c">
+MeshLoader_Result MeshLoader_Job_setMeshIndexData (
+        MeshLoader_Job_Context          jobContext,
+        MeshLoader_IndexData    const * pIndexData
+);
+</pre>
+
+                <ul>
+                    <li> <code>jobContext</code> is a <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle given as
+                        a parameter in the <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a>. </li>
+                    <li> <code>pIndexData</code> is a pointer to a <a href="#MeshLoader_IndexData">MeshLoader_IndexData</a> structure containing
+                        the index data of the mesh.</li>
+                </ul>
+
+                <h3>Valid Usage</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_setMeshIndexData-pointerLifetime-00034</small> <br/>
+                        The memory at the <code>pVertices</code> pointer <strong>must</strong> not be freed from the Job if the call was successful, if it was
+                        allocated dynamically in the Job.</li>
+                    <li> <small>MLUID-MeshLoader_Job_setMeshIndexData-garbageCollector-00035</small> <br/>
+                        If the memory at the <code>pIndexData</code> pointer or the memory at the <a href="#MeshLoader_IndexData">MeshLoader_IndexData</a><code>::pIndices</code>
+                        pointer was allocated using <a href="#MeshLoader_Job_allocateMemory">MeshLoader_Job_allocateMemory</a>,
+                        <a href="#MeshLoader_Job_allocateMemory2">MeshLoader_Job_allocateMemory2</a>, <a href="#MeshLoader_Job_reallocateMemory">MeshLoader_Job_reallocateMemory</a> or
+                        <a href="#MeshLoader_Job_reallocateMemory2">MeshLoader_Job_reallocateMemory2</a>, it <strong>must</strong> not be freed and it <strong>must</strong>
+                        be released right before (ideal case) or right after to this call using <a href="#MeshLoader_Job_releaseMemory">MeshLoader_Job_releaseMemory</a>. </li>
+                </ul>
+
+                <h3>Valid Usage (Implicit)</h3>
+                <ul>
+                    <li> <small>MLUID-MeshLoader_Job_setMeshIndexData-jobContext-parameter</small> <br/>
+                        <code>jobContext</code> <strong>must</strong> be a <i>valid</i> <a href="#MeshLoader_Job_Context">MeshLoader_Job_Context</a> handle
+                        received from the current <a href="#MeshLoader_Job_MainFunction">MeshLoader_Job_MainFunction</a> call. </li>
+                    <li> <small>MLUID-MeshLoader_Job_setMeshIndexData-pFaces-pIndexData</small> <br/>
+                        <code>pIndexData</code> <strong>must</strong> be a <i>valid</i> pointer to a <i>valid</i>
+                        <a href="#MeshLoader_IndexData">MeshLoader_IndexData</a> structure, its <code>indexCount</code> <strong>must</strong>.
+                        be greater than <code>0</code> and its <code>pIndices</code> <strong>must</strong> be a <i>valid</i> pointer to an array
+                        of <code>indexCount</code> <i>valid</i> <a href="#int">MeshLoader_uint32</a> values.</li>
+                </ul>
+
+                <h3>Return Codes</h3>
+                <a href="#successCodes">Success</a>
+                <ul>
+                    <li> <code>MeshLoader_Result_Success</code> </li>
+                </ul>
+
+            </div>
+
+            <div>
+
+                <h2 id="userDefinedJobs-customJobGuidelines">7.4. Custom Job Implementation Guidelines</h2>
+
+
+
+            </div>
 
         </div>
 

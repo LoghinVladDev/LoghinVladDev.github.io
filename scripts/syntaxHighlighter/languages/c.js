@@ -11,6 +11,7 @@ const cTokenRules = {
         operator            : 8,
         enumerant           : 9,
         functionIdentifier  : 10,
+        stringConstant      : 11,
 
         applySpecialTokenRules: (tokens) => {
             for ( let i = 0; i < tokens.length - 1 ; ++i ) {
@@ -30,6 +31,50 @@ const cTokenRules = {
                             }
 
                             break
+                        }
+                    }
+                }
+
+                if (
+                    tokens[i].type === cTokenRules.types.preprocessor &&  (
+                        tokens[i].value === "#include"
+                    )
+                ) {
+                    let coloringSequence = false
+
+                    for ( let nextNotNull = i + 1; nextNotNull < tokens.length; ++ nextNotNull ) {
+
+                        if ( tokens [ nextNotNull ].type === cTokenRules.types.whitespace ) {
+                            continue
+                        }
+
+                        if (
+                            tokens [ nextNotNull ].type === cTokenRules.types.operator &&
+                            tokens [ nextNotNull ].value === "<"
+                        ) {
+                            coloringSequence = true
+                        }
+
+                        if (
+                            tokens [ nextNotNull ].type === cTokenRules.types.operator &&
+                            tokens [ nextNotNull ].value === ">"
+                        ) {
+                            tokens [ nextNotNull ] = {
+                                type        : cTokenRules.types.stringConstant,
+                                value       : tokens[ nextNotNull ].value
+                            }
+
+                            break
+                        }
+
+                        if (
+                            tokens [ nextNotNull ].type !== cTokenRules.types.whitespace &&
+                            coloringSequence
+                        ) {
+                            tokens [ nextNotNull ] = {
+                                type        : cTokenRules.types.stringConstant,
+                                value       : tokens[ nextNotNull ].value
+                            }
                         }
                     }
                 }
@@ -59,7 +104,24 @@ const cTokenRules = {
                     tokens[i].type === cTokenRules.types.operator &&
                     tokens[i].value === "("
                 ) {
-                    for ( let previousPosition = i - 1; previousPosition >= 0; -- previousPosition ) {
+                    let isFuncPtr = false
+
+                    for ( let nextPosition = i + 1; nextPosition < tokens.length; ++ nextPosition ) {
+                        if ( tokens [ nextPosition ].type === cTokenRules.types.whitespace ) {
+                            continue
+                        }
+
+                        if (
+                            tokens [ nextPosition ].type === cTokenRules.types.operator &&
+                            tokens [ nextPosition ].value === "*"
+                        ) {
+                            isFuncPtr = true
+                        }
+
+                        break
+                    }
+
+                    for ( let previousPosition = i - 1; previousPosition >= 0 && ! isFuncPtr; -- previousPosition ) {
 
                         if (
                             tokens [ previousPosition ].type === cTokenRules.types.whitespace
@@ -341,6 +403,22 @@ const cTokenRules = {
         accept: ( token ) => {
             return {
                 type                : cTokenRules.types.numberConstant,
+                value               : token
+            }
+        }
+    },
+
+    stringConstant: {
+        validation: ( token ) => {
+            return (
+                token.startsWith('"') ||
+                token.match( /^"[_a-zA-Z]+\w*"$/ )
+            ) && token.trimEnd() === token
+        },
+
+        accept: ( token ) => {
+            return {
+                type                : cTokenRules.types.stringConstant,
                 value               : token
             }
         }

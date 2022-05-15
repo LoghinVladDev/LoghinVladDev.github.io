@@ -10,6 +10,7 @@ const darculaColorSet = {
     numberConstant: "#6897bb",
     enumerant: "#9876aa",
     functionIdentifier: "#fec56d",
+    stringConstant: "#6a8759",
 
     applyForElement: ( element ) => {
 
